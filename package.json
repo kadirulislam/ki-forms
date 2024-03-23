@@ -1,6 +1,6 @@
 {
   "name": "ki-forms",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "type": "module",
   "description": "",
   "types": "dist/index.d.ts",
