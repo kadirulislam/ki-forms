@@ -51,21 +51,21 @@ Bellow mentioned all the available Components
 
 
 
-|**Name**            |**Props**                         |**values**                        |
-|----------------|--------------------------------------------------------------|--------------------------------------------------------------------------------|
-|`<FormInput />`      |`inputType` *(required)*           | `text`,`number`,`email`,`button`, `checkbox`, `file `,`radio` and all HTML Form Input Types|
-|||`placeholder` *(optional)* |types *`"string"`* |
-|||`value` *(optional)* |types *`"string"`* or  *`"number"`*|
-|||`className` *(optional)* |types *`"string"`*|
-|||`onClick` *(optional)* |*`MouseEventHandler`*|
-|||`onMouseEnter` *(optional)* |*`MouseEventHandler`*|
-|||`onMouseLeave` *(optional)* |*`MouseEventHandler`*|
+|**Name**            |**Props**                         |**values**      |
+|--------------------|----------------------------------|----------------|
+|`<FormInput />`      |`inputType` *(required)*  | `text`,`number`,`email`,`button`, `checkbox`, `file `,`radio` and all HTML Form Input Types|
+| |`placeholder` *(optional)* |types *`"string"`* |
+| |`value` *(optional)* |types *`"string"`* or  *`"number"`*|
+| |`className` *(optional)* |types *`"string"`*|
+| |`onClick` *(optional)* |*`MouseEventHandler`*|
+| |`onMouseEnter` *(optional)* |*`MouseEventHandler`*|
+| |`onMouseLeave` *(optional)* |*`MouseEventHandler`*|
 |`<FormInputTextarea />`      ||`placeholder` *(optional)* |types *`"string"`* |
-|||`value` *(optional)* |types *`"string"`* or  *`"number"`*|
-|||`className` *(optional)* |types *`"string"`*|
-|||`onClick` *(optional)* |*`MouseEventHandler`*|
-|||`onMouseEnter` *(optional)* |*`MouseEventHandler`*|
-|||`onMouseLeave` *(optional)* |*`MouseEventHandler`*|
+| |`value` *(optional)* |types *`"string"`* or  *`"number"`*|
+| |`className` *(optional)* |types *`"string"`*|
+| |`onClick` *(optional)* |*`MouseEventHandler`*|
+| |`onMouseEnter` *(optional)* |*`MouseEventHandler`*|
+| |`onMouseLeave` *(optional)* |*`MouseEventHandler`*|
 
 
 
