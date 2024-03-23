@@ -8,7 +8,13 @@
   "scripts": {
     "build": "npx rollup -c"
   },
-  "keywords": [],
+  "keywords": [
+    "react forms",
+    "reactjs forms",
+    "nextjs forms",
+    "tailwindcss forms",
+    "forms"
+  ],
   "author": "",
   "license": "ISC",
   "devDependencies": {
