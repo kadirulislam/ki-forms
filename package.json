@@ -1,35 +1,50 @@
 {
   "name": "ki-forms",
-  "version": "1.0.10",
+  "version": "2.0.0",
+  "description": "Build dynamic React forms from JSON with zero setup.",
   "type": "module",
-  "description": "",
-  "types": "dist/index.d.ts",
   "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    },
+      "./styles.css": "./dist/index.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
   "scripts": {
-    "build": "npx rollup -c"
+    "build": "tsup src/index.ts --format esm,cjs --dts",
+    "dev": "tsup src/index.ts --watch",
+    "clean": "rm -rf dist"
   },
   "keywords": [
     "react forms",
-    "reactjs forms",
+    "dynamic forms",
+    "json forms",
+    "react form builder",
     "nextjs forms",
-    "tailwindcss forms",
-    "forms"
+    "form generator"
   ],
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "@rollup/plugin-babel": "^6.0.4",
-    "@rollup/plugin-typescript": "^11.1.6",
-    "@types/node": "^20.11.30",
-    "@types/react": "^18.2.69",
-    "@types/react-dom": "^18.2.22",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "rollup": "^4.13.0",
-    "tailwindcss": "^3.4.1",
-    "tslib": "^2.6.2"
+  "author": "Kadirul Islam",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kadirulislam/ki-forms"
   },
-  "dependencies": {
-    "rollup-plugin-postcss": "^4.0.2"
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
   }
 }

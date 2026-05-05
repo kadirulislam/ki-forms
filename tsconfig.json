@@ -1,12 +1,29 @@
 {
-    "compilerOptions": {
-        "jsx": "react",
-        "target": "ES2020",
-        "module": "ESNext",
-        "allowSyntheticDefaultImports": true,
-        "esModuleInterop": true,
-        "declaration": true,
-        "declarationDir": "dist",
-        "strict": true
-    }
+  "compilerOptions": {
+    "target": "ES2019",
+    "lib": ["DOM", "ESNext"],
+
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+
+    "jsx": "react-jsx",
+
+    "declaration": true,
+    "declarationMap": true,
+
+    "outDir": "dist",
+    "rootDir": "src",
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+
+    "forceConsistentCasingInFileNames": true
+  },
+
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
 }

@@ -1,0 +1,44 @@
+/* Minimal, ShadCN-inspired */
+
+.ki-form-item {
+  margin-bottom: 16px;
+}
+
+.ki-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: inherit;
+}
+
+.ki-input,
+.ki-select {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  outline: none;
+  transition: border 0.2s, box-shadow 0.2s;
+  
+}
+
+.ki-input:focus,
+.ki-select:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.ki-error {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #dc2626;
+}
+
+
+.ki-helper {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+}
