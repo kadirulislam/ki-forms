@@ -1,2 +1,4 @@
+import "./styles/index.css"
 
-export * from "./components/Forms";
+export { useKiForm } from "./core/useKiForm"
+export { KiForm } from "./renderer/KiForm"

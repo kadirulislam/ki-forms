@@ -1,77 +1,202 @@
-# Welcome to ki-forms
+# ki-forms
 
-Using this **ki-forms** package you can easily add forms in your ReactJs/NextJs Projects, without doing anything at all.
- If you want to learn about **ki-forms**, you can visit documentation page. 
- 
+Build dynamic React forms from JSON — with zero setup.
 
+Stop wiring forms manually. Define them as data.
 
+---
 
-# Installation
-Using npm:
+## ⚡ Quick Example
 
-```
-npm i ki-forms
+```jsx
+import { KiForm } from "ki-forms"
+import "ki-forms/styles.css"
 
-```
-# Dependencies
-This package build using TailwindCSS, so you need TailwindCSS to work correctly.
- for TailwindCSS Installation: https://tailwindcss.com/docs/installation
-
-
-
-# How To Use
-
-**Import Component:**
-```
-import { FormInput } from "ki-forms";
-
-```
-
-**Use Component:**
-```
-
- <FormInput inputType="text" placeholder="Username" />
-
-
+export default function App() {
+  return (
+    <KiForm
+      fields={[
+        "email",
+        "password",
+        {
+          name: "role",
+          options: ["User", "Admin"]
+        },
+        {
+          name: "company",
+          showIf: { field: "role", equals: "Admin" }
+        }
+      ]}
+      onSubmit={(data) => console.log(data)}
+    />
+  )
+}
 ```
 
-That's It!!
+---
 
+## 🤯 The Problem
 
+Building forms in React is repetitive and inefficient:
 
+- Managing state for every input  
+- Handling validation manually  
+- Writing conditional logic  
+- Repeating boilerplate code  
 
+Even popular libraries like React Hook Form require setup and mental overhead.
 
+---
 
+## ✅ The Solution
 
+ki-forms lets you build forms using simple JSON.
 
-## Components
-Bellow mentioned all the available Components
+- No manual state handling  
+- No boilerplate  
+- No complex configuration  
 
+Just describe your form → it renders automatically.
 
+---
 
+## 📦 Installation
 
+```bash
+npm install ki-forms
+```
 
-|**Name**            |**Props**                         |**values**      |
-|--------------------|----------------------------------|----------------|
-|`<FormInput />`      |`inputType` *(required)*  | `text`,`number`,`email`,`button`, `checkbox`, `file `,`radio` and all HTML Form Input Types|
-| |`placeholder` *(optional)* |types *`"string"`* |
-| |`value` *(optional)* |types *`"string"`* or  *`"number"`*|
-| |`className` *(optional)* |types *`"string"`*|
-| |`onClick` *(optional)* |*`MouseEventHandler`*|
-| |`onMouseEnter` *(optional)* |*`MouseEventHandler`*|
-| |`onMouseLeave` *(optional)* |*`MouseEventHandler`*|
-|`<FormInputTextarea />`      ||`placeholder` *(optional)* |types *`"string"`* |
-| |`value` *(optional)* |types *`"string"`* or  *`"number"`*|
-| |`className` *(optional)* |types *`"string"`*|
-| |`onClick` *(optional)* |*`MouseEventHandler`*|
-| |`onMouseEnter` *(optional)* |*`MouseEventHandler`*|
-| |`onMouseLeave` *(optional)* |*`MouseEventHandler`*|
+---
 
+## 🚀 Basic Usage
 
+```jsx
+import { KiForm } from "ki-forms"
+import "ki-forms/styles.css"
 
+<KiForm
+  fields={["email", "password"]}
+  onSubmit={(data) => console.log(data)}
+/>
+```
 
-We are working on more Components soon!!!
+---
 
+## 🧩 Field Configuration
 
+```js
+{
+  name: "email",
+  type: "email",
+  required: true,
+  label: "Email",
+  placeholder: "Enter your email",
+  helperText: "We never share your email"
+}
+```
 
+---
 
+## 🔄 Conditional Fields
+
+Show fields dynamically based on other values:
+
+```js
+{
+  name: "company",
+  showIf: {
+    field: "role",
+    equals: "Admin"
+  }
+}
+```
+
+---
+
+## 🎯 Smart Defaults
+
+ki-forms automatically:
+
+- Infers input types (`email`, `password`)  
+- Generates labels (`firstName → First Name`)  
+- Adds placeholders (`Enter your email`)  
+- Converts simple strings into fields  
+
+```jsx
+fields={["email", "password"]}
+```
+
+---
+
+## 🧠 Field Events
+
+Run logic when field value changes:
+
+```js
+{
+  name: "role",
+  options: ["User", "Admin"],
+  onChange: (value, values) => {
+    console.log("Selected:", value)
+    console.log("All values:", values)
+  }
+}
+```
+
+---
+
+## 🎨 Styling
+
+Default styles included:
+
+```js
+import "ki-forms/styles.css"
+```
+
+Override using `className`:
+
+```js
+{
+  name: "email",
+  className: "my-custom-input"
+}
+```
+
+---
+
+## ⚙️ Advanced Usage
+
+Use the form hook directly:
+
+```jsx
+import { useKiForm, KiForm } from "ki-forms"
+
+const form = useKiForm({
+  fields: ["email", "password"]
+})
+
+<KiForm form={form} />
+```
+
+---
+
+## 📋 Supported Features
+
+- JSON-based form builder  
+- Conditional fields  
+- Smart defaults  
+- Minimal API  
+- React + Next.js support  
+- Extendable component system  
+- Built-in UI  
+
+---
+
+## ⚖️ Comparison
+
+| Feature           | ki-forms | React Hook Form |
+|------------------|---------|----------------|
+| Setup            | Zero    | Medium         |
+| Boilerplate      | Low     | Medium         |
+| Dynamic forms    | Built-in | Manual        |
+| Learning curve   | Very Low | Medium        |
