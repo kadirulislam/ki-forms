@@ -2,6 +2,8 @@ import { useState } from "react"
 import type { Field } from "../../src/types"
 import { KiForm } from "../../src/renderer/KiForm"
 import type { KiTheme } from "../../src/types"
+import { cn } from "../lib/utils"
+import { Copy, Trash2 } from "lucide-react"
 
 type DropPayload =
   | { kind: "palette"; fieldType: string }
@@ -43,41 +45,52 @@ export function PaperForm({ fields, theme, variant = "classic", selected, onSele
 
   const dropline = (at: number) => (
     <div
-      className={"pf-dropline" + (dropAt === at ? " pf-dropline-active" : "")}
+      className={cn("relative h-0", dropAt === at && "z-10")}
       onDragOver={(e) => {
         e.preventDefault()
         e.stopPropagation()
         setDropAt(at)
       }}
       onDrop={acceptDrop(at)}
-    />
+    >
+      {dropAt === at && (
+        <div className="pointer-events-none absolute inset-x-0 -top-2 h-4">
+          <div className="h-0.5 w-full rounded-full bg-[--studio-accent]" />
+          <div className="absolute -top-[3px] left-0 size-2 rounded-full bg-[--studio-accent]" />
+        </div>
+      )}
+    </div>
   )
 
   return (
-    <div className="pf-paper" onDragLeave={() => setDropAt(null)}>
+    <div className="p-6" onDragLeave={() => setDropAt(null)}>
       {fields.length === 0 ? (
         <div
-          className={"pf-empty" + (dropAt === 0 ? " pf-empty-active" : "")}
+          className={cn(
+            "flex min-h-56 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed p-8 text-center transition-colors",
+            dropAt === 0 ? "border-[--studio-accent] bg-[--studio-accent]/5" : "border-border",
+          )}
           onDragOver={(e) => {
             e.preventDefault()
             setDropAt(0)
           }}
           onDrop={acceptDrop(0)}
         >
-          <strong>Drop your first field here</strong>
-          <span>or click a block on the left to append it</span>
+          <strong className="text-sm font-medium">Drop your first field here</strong>
+          <span className="text-xs text-muted-foreground">or click a block on the left to append it</span>
         </div>
       ) : (
         <>
           {dropline(0)}
           {fields.map((f, i) => (
-            <div key={`${f.name}-${i}`} className="pf-slot">
+            <div key={`${f.name}-${i}`}>
               <div
-                className={
-                  "pf-fieldwrap" +
-                  (selected === i ? " pf-fieldwrap-selected" : "") +
-                  (f.showIf ? " pf-fieldwrap-conditional" : "")
-                }
+                className={cn(
+                  "group relative -mx-2 cursor-grab rounded-lg border border-transparent p-2 transition-colors active:cursor-grabbing",
+                  "hover:border-border hover:bg-accent/30",
+                  selected === i && "border-[--studio-accent] bg-[--studio-accent]/5 ring-1 ring-[--studio-accent]/30",
+                  f.showIf && selected !== i && "border-l-2 border-l-dashed border-l-muted-foreground/30",
+                )}
                 draggable
                 onDragStart={(e) => {
                   e.dataTransfer.setData("application/x-ki-move", String(i))
@@ -93,30 +106,43 @@ export function PaperForm({ fields, theme, variant = "classic", selected, onSele
                   onSelect(i)
                 }}
               >
-                <div className="pf-field-render">
+                {f.showIf && (
+                  <span className="absolute -top-2 right-2 z-10 rounded-full border bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                    conditional
+                  </span>
+                )}
+                <div className="pointer-events-none [&_.ki-form-item]:mb-0">
                   <KiForm key={fields.map((x) => x.name).join("|")} fields={[f]} theme={theme} variant={variant} />
                 </div>
-                <div className="pf-field-actions">
+                <div
+                  className={cn(
+                    "absolute -top-2 right-2 z-10 hidden items-center gap-1 group-hover:flex",
+                    selected === i && "flex",
+                  )}
+                >
                   <button
                     type="button"
                     title="Duplicate"
+                    aria-label="Duplicate field"
+                    className="flex size-6 cursor-pointer items-center justify-center rounded-md border bg-background text-muted-foreground shadow-xs hover:text-foreground"
                     onClick={(e) => {
                       e.stopPropagation()
                       onDuplicate(i)
                     }}
                   >
-                    ⧉
+                    <Copy className="size-3.5" />
                   </button>
                   <button
                     type="button"
                     title="Delete"
-                    className="pf-danger"
+                    aria-label="Delete field"
+                    className="flex size-6 cursor-pointer items-center justify-center rounded-md border bg-background text-muted-foreground shadow-xs hover:bg-destructive hover:text-white"
                     onClick={(e) => {
                       e.stopPropagation()
                       onDelete(i)
                     }}
                   >
-                    ✕
+                    <Trash2 className="size-3.5" />
                   </button>
                 </div>
               </div>

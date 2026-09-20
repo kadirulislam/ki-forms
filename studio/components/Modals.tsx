@@ -4,6 +4,12 @@ import { KiForm } from "../../src/renderer/KiForm"
 import { toJson, toReactSnippet } from "../lib/export"
 import { validateSchema } from "../lib/schema"
 import { TEMPLATES } from "../lib/templates"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs"
+import { Button } from "./ui/button"
+import { Badge } from "./ui/badge"
+import { cn } from "../lib/utils"
+import { Check, FileJson, FileCode2 } from "lucide-react"
 
 function useEscape(onClose: () => void) {
   useEffect(() => {
@@ -23,30 +29,32 @@ export type TemplatesModalProps = {
 export function TemplatesModal({ onPick, onClose }: TemplatesModalProps) {
   useEscape(onClose)
   return (
-    <div className="pm-backdrop" onClick={onClose}>
-      <div className="pm-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="pm-modal-head">
-          <h3>Start from a template</h3>
-          <button type="button" className="pm-close" onClick={onClose}>
-            ✕
-          </button>
-        </div>
-        <div className="pm-template-grid">
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Start from a template</DialogTitle>
+          <DialogDescription>Pick a schema — everything stays editable on the canvas.</DialogDescription>
+        </DialogHeader>
+        <div className="grid grid-cols-2 gap-2">
           {TEMPLATES.map((t) => (
             <button
               key={t.id}
               type="button"
-              className="pm-template"
+              className={cn(
+                "flex cursor-pointer flex-col gap-1 rounded-lg border p-3 text-left transition-colors hover:bg-accent",
+              )}
               onClick={() => onPick(t.id)}
             >
-              <strong>{t.name}</strong>
-              <span>{t.description}</span>
-              <em>{t.fields.length} fields</em>
+              <div className="flex items-center justify-between gap-2">
+                <strong className="text-sm font-medium">{t.name}</strong>
+                <Badge variant="secondary">{t.fields.length} fields</Badge>
+              </div>
+              <span className="text-xs text-muted-foreground">{t.description}</span>
             </button>
           ))}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -92,47 +100,59 @@ export function CodeModal({ fields, theme, variant, onApplyJson, onClose }: Code
   }
 
   return (
-    <div className="pm-backdrop" onClick={onClose}>
-      <div className="pm-modal pm-modal-code" onClick={(e) => e.stopPropagation()}>
-        <div className="pm-modal-head">
-          <div className="pm-tabs">
-            <button type="button" className={tab === "json" ? "pm-tab-active" : ""} onClick={() => setTab("json")}>
-              Schema JSON
-            </button>
-            <button type="button" className={tab === "react" ? "pm-tab-active" : ""} onClick={() => setTab("react")}>
-              React component
-            </button>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="flex max-h-[85vh] max-w-3xl flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="border-b p-4">
+          <div className="flex items-center justify-between gap-2">
+            <DialogTitle className="text-base">Export &amp; import</DialogTitle>
+            <div className="flex items-center gap-2">
+              {tab === "json" && (
+                <Button size="sm" onClick={apply}>
+                  Apply changes
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={copy}>
+                {copied ? <Check /> : null} {copied ? "copied!" : "copy"}
+              </Button>
+            </div>
           </div>
-          <div className="pm-modal-head-actions">
-            {tab === "json" && (
-              <button type="button" className="pm-apply" onClick={apply}>
-                Apply changes
-              </button>
-            )}
-            <button type="button" className="pm-copy" onClick={copy}>
-              {copied ? "copied!" : "copy"}
-            </button>
-            <button type="button" className="pm-close" onClick={onClose}>
-              ✕
-            </button>
+          <DialogDescription className="sr-only">Copy or edit the form schema and React code</DialogDescription>
+        </DialogHeader>
+
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "json" | "react")} className="flex min-h-0 flex-1 flex-col gap-0">
+          <div className="border-b p-2">
+            <TabsList>
+              <TabsTrigger value="json">
+                <FileJson /> Schema JSON
+              </TabsTrigger>
+              <TabsTrigger value="react">
+                <FileCode2 /> React component
+              </TabsTrigger>
+            </TabsList>
           </div>
-        </div>
-        {tab === "json" ? (
-          <>
+
+          <TabsContent value="json" className="flex min-h-0 flex-1 flex-col gap-2 p-4">
             <textarea
-              className="pm-json"
+              className="min-h-0 flex-1 resize-none rounded-md border border-input bg-muted/30 p-3 font-mono text-xs leading-relaxed outline-none focus-visible:border-[--studio-accent] focus-visible:ring-[--studio-accent]/30 focus-visible:ring-[3px]"
               spellCheck={false}
               value={text}
               onChange={(e) => setText(e.target.value)}
             />
-            {error && <div className="pm-error">✕ {error}</div>}
-            {!error && <div className="pm-ok">✓ valid schema — press “Apply changes” to sync the canvas</div>}
-          </>
-        ) : (
-          <pre className="pm-react">{snippet}</pre>
-        )}
-      </div>
-    </div>
+            {error ? (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                ✕ {error}
+              </div>
+            ) : (
+              <div className="text-xs text-muted-foreground">✓ valid schema — press “Apply changes” to sync the canvas</div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="react" className="min-h-0 flex-1 overflow-auto p-4">
+            <pre className="rounded-md border bg-muted/30 p-3 font-mono text-xs leading-relaxed">{snippet}</pre>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -149,22 +169,33 @@ export function PreviewOverlay({ fields, theme, variant, device, onClose }: Prev
   const [result, setResult] = useState<string | null>(null)
 
   return (
-    <div className="pm-backdrop pm-backdrop-preview" onClick={onClose}>
-      <div className={"pm-preview pm-" + device} onClick={(e) => e.stopPropagation()}>
-        <div className="pm-preview-head">
-          <span className="pm-preview-chip">{device === "mobile" ? "Mobile · 390px" : "Desktop"}</span>
-          <span className="pm-preview-chip">{variant === "conversational" ? "Conversational" : "Classic"}</span>
-          <span className="pm-preview-hint">This is exactly what your users will see</span>
-          <button type="button" className="pm-close" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6" onClick={onClose}>
+      <div
+        className={cn(
+          "flex max-h-full w-full flex-col overflow-hidden rounded-xl border bg-background shadow-2xl",
+          device === "mobile" ? "max-w-[420px]" : "max-w-2xl",
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex h-11 shrink-0 items-center gap-2 border-b px-3">
+          <Badge variant="secondary">{device === "mobile" ? "Mobile · 390px" : "Desktop"}</Badge>
+          <Badge variant="secondary">{variant === "conversational" ? "Conversational" : "Classic"}</Badge>
+          <span className="ml-auto text-xs text-muted-foreground">This is exactly what your users will see</span>
+          <Button variant="ghost" size="icon-sm" aria-label="Close" onClick={onClose}>
             ✕
-          </button>
+          </Button>
         </div>
-        <div className="pm-preview-body">
-          <KiForm fields={fields} theme={theme} variant={variant} onSubmit={(values) => setResult(JSON.stringify(values, null, 2))} />
+        <div className="min-h-0 flex-1 overflow-y-auto p-6">
+          <KiForm
+            fields={fields}
+            theme={theme}
+            variant={variant}
+            onSubmit={(values) => setResult(JSON.stringify(values, null, 2))}
+          />
           {result && (
-            <div className="pm-preview-result">
-              <strong>onSubmit received</strong>
-              <pre>{result}</pre>
+            <div className="mt-4 rounded-lg border p-3">
+              <strong className="text-sm">onSubmit received</strong>
+              <pre className="mt-1 overflow-auto font-mono text-xs">{result}</pre>
             </div>
           )}
         </div>

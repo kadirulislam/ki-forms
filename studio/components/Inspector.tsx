@@ -1,4 +1,9 @@
 import type { Field, FieldType } from "../../src/types"
+import { Input } from "./ui/input"
+import { Label } from "./ui/label"
+import { Switch } from "./ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { Separator } from "./ui/separator"
 
 export type InspectorProps = {
   field: Field
@@ -7,6 +12,24 @@ export type InspectorProps = {
 }
 
 const TYPES: FieldType[] = ["text", "email", "password", "number", "textarea", "select", "checkbox"]
+
+function Row({ label, htmlFor, children }: { label: string; htmlFor?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor={htmlFor} className="text-xs text-muted-foreground">{label}</Label>
+      {children}
+    </div>
+  )
+}
+
+function CheckRow({ label, checked, onCheckedChange }: { label: string; checked: boolean; onCheckedChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between">
+      <Label className="text-xs">{label}</Label>
+      <Switch checked={checked} onCheckedChange={onCheckedChange} />
+    </div>
+  )
+}
 
 export function Inspector({ field, otherFields, onChange }: InspectorProps) {
   const hideLabel = field.label === false
@@ -29,30 +52,31 @@ export function Inspector({ field, otherFields, onChange }: InspectorProps) {
   }
 
   return (
-    <aside className="st-panel st-inspector" onClick={(e) => e.stopPropagation()}>
-      <div className="st-panel-title">Field settings</div>
+    <div className="flex flex-col gap-4 p-3">
+      <Row label="Name" htmlFor="inspector-name">
+        <Input id="inspector-name" value={field.name} onChange={(e) => onChange({ name: e.target.value })} onBlur={commitName} className="h-8 font-mono text-xs" />
+      </Row>
 
-      <label className="st-row">
-        <span>Name</span>
-        <input value={field.name} onChange={(e) => onChange({ name: e.target.value })} onBlur={commitName} />
-      </label>
-
-      <label className="st-row">
-        <span>Type</span>
-        <select value={field.type || "text"} onChange={(e) => setType(e.target.value as FieldType)}>
-          {TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-      </label>
+      <Row label="Type">
+        <Select value={field.type || "text"} onValueChange={(v) => setType(v as FieldType)}>
+          <SelectTrigger className="h-8">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {TYPES.map((t) => (
+              <SelectItem key={t} value={t}>
+                {t}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Row>
 
       {field.type === "select" && (
-        <label className="st-row">
-          <span>Options (one per line)</span>
+        <Row label="Options (one per line)">
           <textarea
             rows={4}
+            className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-[--studio-accent] focus-visible:ring-[--studio-accent]/30 focus-visible:ring-[3px]"
             value={Array.isArray(field.options) ? field.options.map((o) => (typeof o === "string" ? o : o.value)).join("\n") : ""}
             onChange={(e) =>
               onChange({
@@ -63,82 +87,86 @@ export function Inspector({ field, otherFields, onChange }: InspectorProps) {
               })
             }
           />
-        </label>
+        </Row>
       )}
 
       {!hideLabel && (
-        <label className="st-row">
-          <span>Label</span>
-          <input value={labelText} placeholder="(auto from name)" onChange={(e) => onChange({ label: e.target.value })} />
-        </label>
+        <Row label="Label" htmlFor="inspector-label">
+          <Input
+            id="inspector-label"
+            value={labelText}
+            placeholder="(auto from name)"
+            onChange={(e) => onChange({ label: e.target.value })}
+            className="h-8"
+          />
+        </Row>
       )}
 
-      <label className="st-check">
-        <input
-          type="checkbox"
-          checked={hideLabel}
-          onChange={(e) => onChange({ label: e.target.checked ? false : undefined })}
-        />
-        <span>Hide label</span>
-      </label>
+      <CheckRow label="Hide label" checked={hideLabel} onCheckedChange={(v) => onChange({ label: v ? false : undefined })} />
 
-      <label className="st-row">
-        <span>Placeholder</span>
-        <input value={field.placeholder || ""} onChange={(e) => onChange({ placeholder: e.target.value })} />
-      </label>
+      <Row label="Placeholder" htmlFor="inspector-placeholder">
+        <Input id="inspector-placeholder" value={field.placeholder || ""} onChange={(e) => onChange({ placeholder: e.target.value })} className="h-8" />
+      </Row>
 
-      <label className="st-row">
-        <span>Helper text</span>
-        <input value={field.helperText || ""} onChange={(e) => onChange({ helperText: e.target.value })} />
-      </label>
+      <Row label="Helper text" htmlFor="inspector-helper">
+        <Input id="inspector-helper" value={field.helperText || ""} onChange={(e) => onChange({ helperText: e.target.value })} className="h-8" />
+      </Row>
 
-      <label className="st-check">
-        <input type="checkbox" checked={!!field.required} onChange={(e) => onChange({ required: e.target.checked })} />
-        <span>Required</span>
-      </label>
+      <CheckRow label="Required" checked={!!field.required} onCheckedChange={(v) => onChange({ required: v })} />
 
-      <div className="st-row st-showif">
-        <span>Show only if</span>
-        <div className="st-showif-controls">
-          <select
+      <Separator />
+
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-xs text-muted-foreground">Show only if</Label>
+        <div className="flex flex-col gap-1.5">
+          <Select
             value={field.showIf?.field || ""}
-            onChange={(e) =>
+            onValueChange={(v) =>
               onChange({
-                showIf: e.target.value === "" ? undefined : { field: e.target.value, equals: "" },
+                showIf: v === "" ? undefined : { field: v, equals: "" },
               })
             }
           >
-            <option value="">(always visible)</option>
-            {otherFields.map((f) => (
-              <option key={f.name} value={f.name}>
-                {f.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="h-8">
+              <SelectValue placeholder="(always visible)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">(always visible)</SelectItem>
+              {otherFields.map((f) => (
+                <SelectItem key={f.name} value={f.name}>
+                  {f.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {field.showIf?.field && (
             <>
-              <select
+              <Select
                 value={field.showIf.equals !== undefined ? "equals" : "notEquals"}
-                onChange={(e) =>
+                onValueChange={(v) =>
                   onChange({
                     showIf: {
                       field: field.showIf!.field!,
-                      ...(e.target.value === "equals"
+                      ...(v === "equals"
                         ? { equals: field.showIf!.notEquals }
                         : { notEquals: field.showIf!.equals }),
                     },
                   })
                 }
               >
-                <option value="equals">equals</option>
-                <option value="notEquals">not equals</option>
-              </select>
-              <input
+                <SelectTrigger className="h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="equals">equals</SelectItem>
+                  <SelectItem value="notEquals">not equals</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
                 placeholder="value"
+                className="h-8"
                 value={
-                  field.showIf.equals !== undefined
-                    ? String(field.showIf.equals)
-                    : String(field.showIf.notEquals)
+                  field.showIf.equals !== undefined ? String(field.showIf.equals) : String(field.showIf.notEquals)
                 }
                 onChange={(e) =>
                   onChange({
@@ -154,8 +182,8 @@ export function Inspector({ field, otherFields, onChange }: InspectorProps) {
             </>
           )}
         </div>
-        <p className="st-hint">AND/OR groups can be edited in the JSON tab.</p>
+        <p className="text-[11px] text-muted-foreground">AND/OR groups can be edited in the JSON tab.</p>
       </div>
-    </aside>
+    </div>
   )
 }

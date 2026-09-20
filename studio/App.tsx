@@ -9,12 +9,33 @@ import { TemplatesModal, CodeModal, PreviewOverlay } from "./components/Modals"
 import { validateSchema } from "./lib/schema"
 import { toReactSnippet } from "./lib/export"
 import { TEMPLATES } from "./lib/templates"
+import type { ShadcnPreset } from "./lib/shadcn-presets"
+import { Button } from "./components/ui/button"
+import { Separator } from "./components/ui/separator"
+import { Toaster } from "./components/ui/sonner"
+import { Tooltip, TooltipContent, TooltipTrigger } from "./components/ui/tooltip"
+import { toast } from "sonner"
+import {
+  Undo2,
+  Redo2,
+  Monitor,
+  Smartphone,
+  Zap,
+  Code2,
+  Eye,
+  Copy,
+  Moon,
+  Sun,
+  Blocks,
+  Paintbrush,
+  Settings2,
+} from "lucide-react"
 
 type Variant = "classic" | "conversational"
-type Doc = { title: string; fields: Field[]; theme: KiTheme; variant: Variant }
+type Doc = { title: string; fields: Field[]; theme: KiTheme; variant: Variant; presetId?: string }
 type Panel = "blocks" | "style" | "form"
 
-const STORAGE_KEY = "ki-studio-doc-v1"
+const STORAGE_KEY = "ki-studio-doc-v2"
 
 const NEW_FIELD_SEEDS: Record<string, Partial<Field>> = {
   text: { type: "text", placeholder: "Short answer" },
@@ -44,17 +65,11 @@ function loadDoc(): Doc {
       fields: r.ok ? r.fields : fallback().fields,
       theme: p.theme !== null && typeof p.theme === "object" ? (p.theme as KiTheme) : {},
       variant: p.variant === "conversational" ? "conversational" : "classic",
+      presetId: typeof p.presetId === "string" ? p.presetId : undefined,
     }
   } catch {
     return fallback()
   }
-}
-
-function savedLabel(at: number): string {
-  const s = Math.round((Date.now() - at) / 1000)
-  if (s < 8) return "Just now"
-  if (s < 60) return `${s}s ago`
-  return `${Math.round(s / 60)}m ago`
 }
 
 export default function App() {
@@ -70,13 +85,38 @@ export default function App() {
   const [panel, setPanel] = useState<Panel>("blocks")
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop")
   const [modal, setModal] = useState<"none" | "templates" | "code" | "preview">("none")
-  const [toast, setToast] = useState<string | null>(null)
-  const [savedAt, setSavedAt] = useState<number>(() => Date.now())
+  const [dark, setDark] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("ki-studio-dark") === "1"
+    } catch {
+      return false
+    }
+  })
+  const [preset, setPreset] = useState<ShadcnPreset | null>(null)
+  const [presetDark, setPresetDark] = useState(false)
 
-  const flash = useCallback((message: string) => {
-    setToast(message)
-    setTimeout(() => setToast(null), 1800)
-  }, [])
+  /** Apply the studio accent + preset preview mode on <html> for Tailwind + Radix portals. */
+  useEffect(() => {
+    const root = document.documentElement
+    root.classList.toggle("dark", dark)
+    try {
+      localStorage.setItem("ki-studio-dark", dark ? "1" : "0")
+    } catch {
+      // non-fatal
+    }
+  }, [dark])
+
+  useEffect(() => {
+    const root = document.documentElement
+    if (preset) {
+      const t = presetDark ? preset.dark : preset.light
+      root.style.setProperty("--studio-accent", t.accentColor)
+      root.style.setProperty("--studio-radius", t.radius)
+    } else {
+      root.style.removeProperty("--studio-accent")
+      root.style.removeProperty("--studio-radius")
+    }
+  }, [preset, presetDark])
 
   /** Apply a document change, pushing an undo snapshot (coalesced for typing). */
   const update = useCallback((fn: (d: Doc) => Doc, coalesce = false) => {
@@ -121,7 +161,6 @@ export default function App() {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(doc))
-      setSavedAt(Date.now())
     } catch {
       // storage unavailable — studio still works in-memory
     }
@@ -212,18 +251,18 @@ export default function App() {
       })
       setSelected(null)
       setModal("none")
-      flash(`Loaded "${tpl.name}"`)
+      toast(`Loaded "${tpl.name}"`)
     },
-    [update, flash],
+    [update],
   )
 
   const applyJson = useCallback(
     (fields: Field[]) => {
       update((d) => ({ ...d, fields }))
       setSelected(null)
-      flash("Schema applied")
+      toast("Schema applied")
     },
-    [update, flash],
+    [update],
   )
 
   const copyReact = useCallback(() => {
@@ -231,9 +270,34 @@ export default function App() {
     const snippet = toReactSnippet("MyForm", d.fields, { theme: d.theme, variant: d.variant })
     navigator.clipboard
       .writeText(snippet)
-      .then(() => flash("React code copied — paste it into your app"))
-      .catch(() => flash("Clipboard unavailable"))
-  }, [flash])
+      .then(() => toast.success("React code copied — paste it into your app"))
+      .catch(() => toast.error("Clipboard unavailable"))
+  }, [])
+
+  /** Apply a shadcn preset: tokens become the doc theme so preview + exports match. */
+  const applyPreset = useCallback(
+    (p: ShadcnPreset | null) => {
+      setPreset(p)
+      if (!p) {
+        update((d) => ({ ...d, theme: {} }))
+        return
+      }
+      setPresetDark(dark)
+      const t = dark ? p.dark : p.light
+      update((d) => ({ ...d, theme: { ...t }, presetId: p.id }))
+      toast(`Theme: shadcn ${p.name} (${dark ? "dark" : "light"})`)
+    },
+    [update, dark],
+  )
+
+  /** Flip the applied preset between light/dark. */
+  const togglePresetMode = useCallback(() => {
+    if (!preset) return
+    const next = !presetDark
+    setPresetDark(next)
+    const t = next ? preset.dark : preset.light
+    update((d) => ({ ...d, theme: { ...t }, presetId: preset.id }))
+  }, [preset, presetDark, update])
 
   const selectedField = selected !== null ? doc.fields[selected] : undefined
   const otherFields = useMemo(() => doc.fields.filter((_, i) => i !== selected), [doc.fields, selected])
@@ -249,13 +313,22 @@ export default function App() {
     [undo, redo],
   )
 
+  const railItems: { id: Panel; icon: React.ReactNode; label: string }[] = [
+    { id: "blocks", icon: <Blocks />, label: "Blocks" },
+    { id: "style", icon: <Paintbrush />, label: "Style" },
+    { id: "form", icon: <Settings2 />, label: "Form" },
+  ]
+
   return (
-    <div className="se-page" onKeyDown={onKeydown}>
-      <header className="se-topbar">
-        <div className="se-brand">
-          <span className="se-logo">ki</span>
+    <div className="studio-root flex h-screen flex-col overflow-hidden font-sans antialiased" onKeyDown={onKeydown}>
+      {/* ---------- top bar ---------- */}
+      <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-card px-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="flex size-8 items-center justify-center rounded-md bg-[--studio-accent] text-sm font-bold text-white">
+            ki
+          </span>
           <input
-            className="se-title"
+            className="w-44 min-w-0 truncate rounded-md bg-transparent px-2 py-1 text-sm font-medium outline-none hover:bg-accent focus:bg-accent"
             value={doc.title}
             placeholder="Untitled form"
             aria-label="Form name"
@@ -263,95 +336,127 @@ export default function App() {
           />
         </div>
 
-        <div className="se-topbar-center">
-          <button type="button" className="se-iconbtn" title="Undo (Ctrl+Z)" disabled={past.length === 0} onClick={undo}>
-            ↺
-          </button>
-          <button type="button" className="se-iconbtn" title="Redo (Ctrl+Shift+Z)" disabled={future.length === 0} onClick={redo}>
-            ↻
-          </button>
-          <span className="se-saved">
-            <span className="se-saved-dot" /> Last saved {savedLabel(savedAt)}
-          </span>
-          <span className="se-device">
-            <button
-              type="button"
-              className={device === "desktop" ? "se-device-active" : ""}
-              title="Desktop width"
-              onClick={() => setDevice("desktop")}
-            >
-              ▭
-            </button>
-            <button
-              type="button"
-              className={device === "mobile" ? "se-device-active" : ""}
-              title="Mobile width"
-              onClick={() => setDevice("mobile")}
-            >
-              ▯
-            </button>
-          </span>
+        <div className="mx-auto flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label="Undo (Ctrl+Z)" disabled={past.length === 0} onClick={undo}>
+                <Undo2 />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Undo (Ctrl+Z)</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label="Redo (Ctrl+Shift+Z)" disabled={future.length === 0} onClick={redo}>
+                <Redo2 />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Redo (Ctrl+Shift+Z)</TooltipContent>
+          </Tooltip>
+          <Separator orientation="vertical" className="mx-1 !h-5" />
+          <div className="flex items-center rounded-md border p-0.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={device === "desktop" ? "secondary" : "ghost"}
+                  size="icon-sm"
+                  aria-label="Desktop width"
+                  onClick={() => setDevice("desktop")}
+                >
+                  <Monitor />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Desktop width</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={device === "mobile" ? "secondary" : "ghost"}
+                  size="icon-sm"
+                  aria-label="Mobile width"
+                  onClick={() => setDevice("mobile")}
+                >
+                  <Smartphone />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Mobile width</TooltipContent>
+            </Tooltip>
+          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Toggle dark mode"
+                onClick={() => setDark((v) => !v)}
+              >
+                {dark ? <Sun /> : <Moon />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{dark ? "Light mode" : "Dark mode"}</TooltipContent>
+          </Tooltip>
         </div>
 
-        <div className="se-topbar-actions">
-          <button type="button" className="se-btn se-btn-accent" onClick={() => setModal("templates")}>
-            ⚡ Templates
-          </button>
-          <button type="button" className="se-btn" onClick={() => setModal("code")}>
-            {"</>"} Code
-          </button>
-          <button type="button" className="se-btn" onClick={() => setModal("preview")}>
-            ◉ Preview
-          </button>
-          <button type="button" className="se-btn se-btn-primary" onClick={copyReact}>
-            ➤ Copy React code
-          </button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setModal("templates")}>
+            <Zap /> Templates
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setModal("code")}>
+            <Code2 /> Code
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setModal("preview")}>
+            <Eye /> Preview
+          </Button>
+          <Button size="sm" onClick={copyReact}>
+            <Copy /> Copy React code
+          </Button>
         </div>
       </header>
 
-      <div className="se-body">
-        <nav className="se-rail" aria-label="Panels">
-          {(
-            [
-              { id: "blocks", icon: "⊞", label: "Blocks" },
-              { id: "style", icon: "✎", label: "Style" },
-              { id: "form", icon: "⚙", label: "Form" },
-            ] as { id: Panel; icon: string; label: string }[]
-          ).map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className={"se-rail-item" + (panel === p.id ? " se-rail-active" : "")}
-              onClick={() => setPanel(p.id)}
-            >
-              <span className="se-rail-icon">{p.icon}</span>
-              <span className="se-rail-label">{p.label}</span>
-            </button>
+      {/* ---------- body ---------- */}
+      <div className="flex min-h-0 flex-1">
+        {/* icon rail */}
+        <nav className="flex w-14 shrink-0 flex-col items-center gap-1 border-r bg-sidebar py-3" aria-label="Panels">
+          {railItems.map((p) => (
+            <Tooltip key={p.id}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={panel === p.id ? "secondary" : "ghost"}
+                  size="icon"
+                  className="size-10 rounded-lg"
+                  aria-label={p.label}
+                  aria-pressed={panel === p.id}
+                  onClick={() => setPanel(p.id)}
+                >
+                  {p.icon}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">{p.label}</TooltipContent>
+            </Tooltip>
           ))}
         </nav>
 
-        <aside className="se-sidepanel">
-          <div className="se-sidepanel-tabs">
-            {(
-              [
-                { id: "blocks", label: "Blocks" },
-                { id: "style", label: "Design" },
-                { id: "form", label: "Form" },
-              ] as { id: Panel; label: string }[]
-            ).map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                className={"se-sidepanel-tab" + (panel === t.id ? " se-sidepanel-tab-active" : "")}
-                onClick={() => setPanel(t.id)}
-              >
-                {t.label}
-              </button>
-            ))}
+        {/* side panel */}
+        <aside className="flex w-72 shrink-0 flex-col border-r bg-sidebar">
+          <div className="flex h-10 items-center border-b px-3">
+            <span className="text-sm font-medium">{railItems.find((r) => r.id === panel)?.label}</span>
+            {panel === "style" && preset && (
+              <span className="ml-auto text-xs text-muted-foreground">shadcn {preset.name}</span>
+            )}
           </div>
-          <div className="se-sidepanel-body">
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
             {panel === "blocks" && <BlocksPanel onAdd={(t) => addField(t)} />}
-            {panel === "style" && <StylePanel theme={doc.theme} onChange={(theme) => update((d) => ({ ...d, theme }), true)} />}
+            {panel === "style" && (
+              <StylePanel
+                theme={doc.theme}
+                preset={preset}
+                presetDark={presetDark}
+                onPreset={applyPreset}
+                onPresetMode={togglePresetMode}
+                onTokens={(theme) => update((d) => ({ ...d, theme }), true)}
+                onClearPreset={() => setPreset(null)}
+              />
+            )}
             {panel === "form" && (
               <FormPanel
                 formTitle={doc.title}
@@ -363,8 +468,20 @@ export default function App() {
           </div>
         </aside>
 
-        <main className={"se-canvas se-canvas-" + device} onClick={() => setSelected(null)}>
-          <div className={"se-paper" + (device === "mobile" ? " se-paper-mobile" : "")}>
+        {/* canvas */}
+        <main
+          className={
+            "relative min-w-0 flex-1 overflow-auto bg-accent/40 p-6 " +
+            (device === "mobile" ? "flex justify-center" : "")
+          }
+          onClick={() => setSelected(null)}
+        >
+          <div
+            className={
+              "mx-auto w-full rounded-xl border bg-card shadow-sm transition-[max-width] " +
+              (device === "mobile" ? "max-w-[390px]" : "max-w-2xl")
+            }
+          >
             <PaperForm
               fields={doc.fields}
               theme={doc.theme}
@@ -378,12 +495,15 @@ export default function App() {
           </div>
 
           {selectedField && (
-            <div className="se-inspector" onClick={(e) => e.stopPropagation()}>
-              <div className="se-inspector-head">
-                <span>Field settings</span>
-                <button type="button" title="Close" onClick={() => setSelected(null)}>
+            <div
+              className="absolute right-4 top-4 bottom-4 z-10 w-72 overflow-y-auto rounded-lg border bg-popover shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="sticky top-0 z-10 flex h-10 items-center justify-between border-b bg-popover px-3">
+                <span className="text-sm font-medium">Field settings</span>
+                <Button variant="ghost" size="icon-sm" aria-label="Close" onClick={() => setSelected(null)}>
                   ✕
-                </button>
+                </Button>
               </div>
               <Inspector
                 field={selectedField}
@@ -415,7 +535,7 @@ export default function App() {
         />
       )}
 
-      {toast && <div className="se-toast">{toast}</div>}
+      <Toaster position="bottom-right" />
     </div>
   )
 }
