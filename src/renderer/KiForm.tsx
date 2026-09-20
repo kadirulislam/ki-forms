@@ -3,27 +3,30 @@ import { FieldRenderer } from "./FieldRenderer"
 import { InputField } from "../fields/Input"
 import { SelectField } from "../fields/Select"
 import { TextareaField } from "../fields/Textarea"
+import { CheckboxField } from "../fields/Checkbox"
+import type { KiFormComponents, KiFormProps } from "../types"
 
-const defaultComponents = {
+const defaultComponents: KiFormComponents = {
   text: InputField,
   email: InputField,
   password: InputField,
   select: SelectField,
   textarea: TextareaField,
-  number: InputField, 
+  number: InputField,
+  checkbox: CheckboxField,
 }
 
-export function KiForm(props: any) {
-  const form = props.form || useKiForm(props)
+export function KiForm(props: KiFormProps) {
+  const form = props.form || useKiForm(props as never)
 
-  const components = {
+  const components: KiFormComponents = {
     ...defaultComponents,
-    ...props.components
+    ...props.components,
   }
 
   return (
     <form onSubmit={form.handleSubmit} className={props.className}>
-      {form.fields.map((field: any) => (
+      {form.fields.map((field) => (
         <FieldRenderer
           key={field.name}
           field={field}

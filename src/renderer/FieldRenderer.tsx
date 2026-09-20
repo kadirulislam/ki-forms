@@ -1,10 +1,10 @@
 import { shouldShow } from "../utils/conditions"
-import { Field } from "../types"
+import { Field, FormApi, FieldComponentProps, KiFormComponents } from "../types"
 
 type Props = {
   field: Field
-  form: any
-  components: Record<string, any>
+  form: FormApi
+  components: KiFormComponents
 }
 
 export function FieldRenderer({ field, form, components }: Props) {
@@ -17,12 +17,12 @@ export function FieldRenderer({ field, form, components }: Props) {
     return null
   }
 
-  return (
-    <Component
-      field={field}
-      value={form.values[field.name]}
-      error={form.errors[field.name]}
-      onChange={(value: any) => form.setValue(field.name, value)}
-    />
-  )
+  const props: FieldComponentProps = {
+    field,
+    value: form.values[field.name],
+    error: form.errors[field.name],
+    onChange: (value: any) => form.setValue(field.name, value),
+  }
+
+  return <Component {...props} />
 }

@@ -1,4 +1,6 @@
-export function InputField({ field, value, onChange, error }: any) {
+import type { FieldComponentProps } from "../types"
+
+export function InputField({ field, value, onChange, error }: FieldComponentProps) {
   return (
     <div className="ki-form-item">
       {field.label !== false && (

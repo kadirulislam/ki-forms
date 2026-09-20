@@ -1,9 +1,9 @@
 import { useState } from "react"
 import { applyDefaults } from "../utils/defaults"
 import { shouldShow } from "../utils/conditions"
-import { Field, FieldInput, UseKiFormOptions } from "../types"
+import { Field, FieldInput, FormApi, FormValues, UseKiFormOptions } from "../types"
 
-export function useKiForm(options: UseKiFormOptions) {
+export function useKiForm(options: UseKiFormOptions): FormApi {
   const { fields, onSubmit, schema } = options
 
   const normalizedFields: Field[] = fields
@@ -15,21 +15,21 @@ export function useKiForm(options: UseKiFormOptions) {
   const initialValues = normalizedFields.reduce((acc, field) => {
     acc[field.name] = field.defaultValue ?? ""
     return acc
-  }, {} as Record<string, any>)
+  }, {} as FormValues)
 
-  const [values, setValues] = useState(initialValues)
+  const [values, setValues] = useState<FormValues>(initialValues)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
- function setValue(name: string, value: any) {
-  setValues((prev) => {
-    const updated = { ...prev, [name]: value }
+  function setValue(name: string, value: any) {
+    setValues((prev) => {
+      const updated = { ...prev, [name]: value }
 
-    const field = normalizedFields.find(f => f.name === name)
-    field?.onChange?.(value, updated)
+      const field = normalizedFields.find(f => f.name === name)
+      field?.onChange?.(value, updated)
 
-    return updated
-  })
-}
+      return updated
+    })
+  }
 
   function validate() {
     const newErrors: Record<string, string> = {}

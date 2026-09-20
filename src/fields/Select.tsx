@@ -1,4 +1,6 @@
-export function SelectField({ field, value, onChange, error }: any) {
+import type { FieldComponentProps } from "../types"
+
+export function SelectField({ field, value, onChange, error }: FieldComponentProps) {
   const options = field.options || []
 
   return (
