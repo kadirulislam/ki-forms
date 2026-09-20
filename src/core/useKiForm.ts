@@ -58,6 +58,36 @@ export function useKiForm(options: UseKiFormOptions): FormApi {
     return Object.keys(newErrors).length === 0
   }
 
+  /** Validate one visible field in isolation (added in 2.1.0 for per-step UIs).
+   *  Merges the result into the error map without clearing other fields' errors. */
+  function validateField(name: string): boolean {
+    const field = normalizedFields.find((f) => f.name === name)
+    if (!field || !shouldShow(field, values)) return true
+
+    let error: string | undefined
+    if (field.required && !values[field.name]) {
+      error = `${field.label} is required`
+    } else if (schema?.safeParse) {
+      const result = schema.safeParse(values)
+      if (!result.success) {
+        const issues = result.error.errors ?? result.error.issues ?? []
+        const mine = issues.find((issue: any) => issue.path?.[0] === name)
+        if (mine) error = mine.message
+      }
+    }
+
+    setErrors((prev) => {
+      if (!error) {
+        if (!(name in prev)) return prev
+        const next = { ...prev }
+        delete next[name]
+        return next
+      }
+      return { ...prev, [name]: error }
+      })
+    return !error
+  }
+
   function handleSubmit(e?: React.FormEvent) {
     if (e) e.preventDefault()
 
@@ -72,6 +102,7 @@ export function useKiForm(options: UseKiFormOptions): FormApi {
     values,
     errors,
     setValue,
-    handleSubmit
+    handleSubmit,
+    validateField
   }
 }

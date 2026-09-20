@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck (src + tests)
+        run: npm run typecheck
+
+      - name: Test (compat + features)
+        run: npm test
+
+      - name: Build library
+        run: npm run build
+
+      - name: Build demo
+        run: npm run demo:build

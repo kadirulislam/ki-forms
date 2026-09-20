@@ -262,6 +262,25 @@ when it would be shown. Works with zod v3 and v4.
 
 ---
 
+## 💬 Conversational Mode (new in 2.1)
+
+One question at a time, Typeform-style — with a progress bar, Back/Next,
+Enter-to-advance, and automatic jump-back to a failing step:
+
+```jsx
+<KiForm
+  fields={fields}
+  variant="conversational"
+  stepLabels={{ next: "Continue", submit: "Send it" }}
+  onSubmit={save}
+/>
+```
+
+Hidden conditional fields are skipped automatically. Enter inside a textarea
+inserts a newline instead of advancing.
+
+---
+
 ## ⚖️ Comparison
 
 | Feature           | ki-forms | React Hook Form |

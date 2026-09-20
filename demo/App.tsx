@@ -184,6 +184,7 @@ function Demo() {
   const cond = useSubmit()
   const signup = useSubmit()
   const feedback = useSubmit()
+  const conv = useSubmit()
 
   const form = useKiForm({
     fields: [
@@ -258,6 +259,19 @@ function Demo() {
             />
             <p className="hint">Submit empty → inline error. Age submits as a real number.</p>
             <Result values={signup.values} label="the values" />
+          </Card>
+
+          <Card title="Conversational mode" tag="variant" tagGreen>
+            <KiForm
+              fields={[
+                { name: "name", required: true },
+                { name: "email", type: "email" },
+              ]}
+              variant="conversational"
+              onSubmit={conv.onSubmit}
+            />
+            <p className="hint">One question per step. Enter to advance, Back to review.</p>
+            <Result values={conv.values} label="the submission" />
           </Card>
 
           <Card title="Custom components" tag="components override">

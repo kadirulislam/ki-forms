@@ -165,14 +165,13 @@ describe("compat: advanced usage (controlled hook)", () => {
 
     render(<Consumer />)
 
-    // Frozen public shape — additive only, never remove or rename
-    expect(Object.keys(captured as any).sort()).toEqual([
-      "errors",
-      "fields",
-      "handleSubmit",
-      "setValue",
-      "values",
-    ])
+    // Frozen public shape — the 2.0.0 keys must ALWAYS be present.
+    // (2.1.0 added `validateField`; update the "added" list, never the frozen list.)
+    const keys = Object.keys(captured as any).sort()
+    for (const frozen of ["errors", "fields", "handleSubmit", "setValue", "values"]) {
+      expect(keys).toContain(frozen)
+    }
+    expect(keys).toContain("validateField") // added in 2.1.0
 
     fireEvent.change(screen.getByPlaceholderText("Enter your email"), {
       target: { value: "a@b.co" },

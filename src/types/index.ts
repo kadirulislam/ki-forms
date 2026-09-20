@@ -97,6 +97,8 @@ export type FormApi = {
   errors: Record<string, string>
   setValue: (name: string, value: any) => void
   handleSubmit: (e?: FormEvent) => void
+  /** Validate a single visible field (added in 2.1.0 — additions keep the 2.0.0 keys intact) */
+  validateField: (name: string) => boolean
 }
 
 export type UseKiFormOptions = {
@@ -114,4 +116,8 @@ export type KiFormProps = {
   form?: FormApi
   /** Visual tokens mapped to --ki-* CSS variables (added in 2.1.0). */
   theme?: KiTheme
+  /** "conversational" renders one field per step (added in 2.1.0). Default: "classic". */
+  variant?: "classic" | "conversational"
+  /** Button labels for the conversational variant (added in 2.1.0). */
+  stepLabels?: { next?: string; previous?: string; submit?: string }
 }

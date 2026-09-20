@@ -1,4 +1,5 @@
 import { useKiForm } from "../core/useKiForm"
+import { ConversationalForm } from "./ConversationalForm"
 import { FieldRenderer } from "./FieldRenderer"
 import { InputField } from "../fields/Input"
 import { SelectField } from "../fields/Select"
@@ -23,6 +24,10 @@ export function KiForm(props: KiFormProps) {
   const components: KiFormComponents = {
     ...defaultComponents,
     ...props.components,
+  }
+
+  if (props.variant === "conversational") {
+    return <ConversationalForm form={form} components={components} className={props.className} theme={props.theme} stepLabels={props.stepLabels} />
   }
 
   return (
