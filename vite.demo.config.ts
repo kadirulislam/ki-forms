@@ -1,12 +1,14 @@
 import { defineConfig } from "vite"
 import { viteSingleFile } from "vite-plugin-singlefile"
-import { resolve } from "path"
+import { fileURLToPath } from "url"
+
+const root = fileURLToPath(new URL("./demo", import.meta.url))
 
 export default defineConfig({
-  root: resolve(__dirname, "demo"),
+  root,
   plugins: [viteSingleFile()],
   build: {
-    outDir: resolve(__dirname, "dist-demo"),
+    outDir: fileURLToPath(new URL("./dist-demo", import.meta.url)),
     emptyOutDir: true,
   },
 })
