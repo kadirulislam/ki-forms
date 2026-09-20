@@ -41,8 +41,22 @@ export function fieldSummary(field: Field): string {
   return t
 }
 
+export type SnippetOptions = {
+  theme?: Record<string, string>
+  variant?: "classic" | "conversational"
+}
+
+function themeLiteral(theme: Record<string, string>): string {
+  const rows = Object.entries(theme)
+    .map(([k, v]) => `        ${k}: "${v}"`)
+    .join("\n")
+  return `theme={{
+${rows},
+      }}`
+}
+
 /** Ready-to-paste React component using the real ki-forms API. */
-export function toReactSnippet(componentName: string, fields: Field[]): string {
+export function toReactSnippet(componentName: string, fields: Field[], options?: SnippetOptions): string {
   const lines = fields
     .map((f) => {
       if (typeof f === "string") return `  "${f}",`
@@ -74,14 +88,17 @@ export function toReactSnippet(componentName: string, fields: Field[]): string {
     })
     .join("\n")
 
+  const variantLine = options?.variant === "conversational" ? '\n      variant="conversational"' : ""
+  const themeLine = options?.theme && Object.keys(options.theme).length > 0 ? `\n      ${themeLiteral(options.theme)}` : ""
+
   return `import { KiForm } from "ki-forms"
 
 export default function ${componentName}() {
   return (
-    <KiForm
+    <KiForm${variantLine}
       fields={[
 ${lines}
-      ]}
+      ]}${themeLine}
       onSubmit={(values) => {
         console.log(values)
       }}

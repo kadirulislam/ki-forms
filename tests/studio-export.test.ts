@@ -73,4 +73,24 @@ describe("toReactSnippet", () => {
     expect(snippet).toContain("required: true")
     expect(snippet).toContain('placeholder: "you@co.com"')
   })
+
+  it("omits theme and variant when default options are passed", () => {
+    const plain = toReactSnippet("MyForm", [{ name: "email", type: "email" }], {})
+    expect(plain).not.toContain("theme=")
+    expect(plain).not.toContain("variant=")
+  })
+
+  it("emits conversational variant", () => {
+    const conv = toReactSnippet("MyForm", [{ name: "email", type: "email" }], { variant: "conversational" })
+    expect(conv).toContain('variant="conversational"')
+  })
+
+  it("emits a theme prop block with tokens", () => {
+    const themed = toReactSnippet("MyForm", [{ name: "email", type: "email" }], {
+      theme: { accentColor: "#8b5cf6", radius: "12px" },
+    })
+    expect(themed).toContain("theme={{")
+    expect(themed).toContain('accentColor: "#8b5cf6"')
+    expect(themed).toContain('radius: "12px"')
+  })
 })
