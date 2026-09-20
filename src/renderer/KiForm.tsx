@@ -4,6 +4,7 @@ import { InputField } from "../fields/Input"
 import { SelectField } from "../fields/Select"
 import { TextareaField } from "../fields/Textarea"
 import { CheckboxField } from "../fields/Checkbox"
+import { themeToCssVars } from "../theme"
 import type { KiFormComponents, KiFormProps } from "../types"
 
 const defaultComponents: KiFormComponents = {
@@ -25,7 +26,11 @@ export function KiForm(props: KiFormProps) {
   }
 
   return (
-    <form onSubmit={form.handleSubmit} className={props.className}>
+    <form
+      onSubmit={form.handleSubmit}
+      className={["ki-form", props.className].filter(Boolean).join(" ")}
+      style={props.theme ? themeToCssVars(props.theme) : undefined}
+    >
       {form.fields.map((field) => (
         <FieldRenderer
           key={field.name}

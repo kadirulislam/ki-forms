@@ -6,6 +6,7 @@ export { InputField } from "./fields/Input"
 export { SelectField } from "./fields/Select"
 export { TextareaField } from "./fields/Textarea"
 export { CheckboxField } from "./fields/Checkbox"
+export { defaultTheme, themeToCssVars } from "./theme"
 
 export type {
   FieldType,
@@ -19,4 +20,5 @@ export type {
   FormApi,
   UseKiFormOptions,
   KiFormProps,
+  KiTheme,
 } from "./types"

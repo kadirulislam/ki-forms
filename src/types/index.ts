@@ -10,9 +10,27 @@ export type FieldType =
   | "textarea"
 
 export type ShowIf = {
-  field: string
+  /** Dependency field. Required for a single condition; omit when using all/any groups. (optional since 2.1.0 — widening, 2.0.0 schemas unchanged) */
+  field?: string
   equals?: any
   notEquals?: any
+
+  /** All of these conditions must match (added in 2.1.0). */
+  all?: { field: string; equals?: any; notEquals?: any }[]
+  /** At least one of these conditions must match (added in 2.1.0). */
+  any?: { field: string; equals?: any; notEquals?: any }[]
+}
+
+/** Visual tokens for the built-in styles (added in 2.1.0). */
+export type KiTheme = {
+  accentColor?: string
+  borderColor?: string
+  errorColor?: string
+  helperColor?: string
+  radius?: string
+  surfaceColor?: string
+  textColor?: string
+  fontFamily?: string
 }
 
 export type Field = {
@@ -50,7 +68,11 @@ export type KiFormSchema = {
     | { success: true; data?: FormValues }
     | {
         success: false
-        error: { errors: { path: (string | number)[]; message: string }[] }
+        /** zod v3 shape (`errors`) and zod v4 shape (`issues`) both accepted */
+        error: {
+          errors?: { path: (string | number)[]; message: string }[]
+          issues?: { path: (string | number)[]; message: string }[]
+        }
       }
 }
 
@@ -90,4 +112,6 @@ export type KiFormProps = {
   className?: string
   components?: KiFormComponents
   form?: FormApi
+  /** Visual tokens mapped to --ki-* CSS variables (added in 2.1.0). */
+  theme?: KiTheme
 }

@@ -1,7 +1,15 @@
-/* Minimal, ShadCN-inspired */
+/* Minimal, ShadCN-inspired.
+   2.1.0: colors/radius are CSS variables with fallbacks — defaults match the
+   original hardcoded values, and <KiForm theme={...}> overrides them via
+   inline --ki-* custom properties. */
 
 .ki-form-item {
   margin-bottom: 16px;
+}
+
+.ki-form {
+  font-family: var(--ki-font, inherit);
+  color: var(--ki-text, inherit);
 }
 
 .ki-label {
@@ -17,28 +25,28 @@
   width: 100%;
   padding: 8px 10px;
   font-size: 14px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  border: 1px solid var(--ki-border, #d1d5db);
+  border-radius: var(--ki-radius, 6px);
+  background: var(--ki-surface, transparent);
+  color: inherit;
   outline: none;
   transition: border 0.2s, box-shadow 0.2s;
-  
 }
 
 .ki-input:focus,
 .ki-select:focus {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+  border-color: var(--ki-accent, #6366f1);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ki-accent, #6366f1) 20%, transparent);
 }
 
 .ki-error {
   margin-top: 4px;
   font-size: 12px;
-  color: #dc2626;
+  color: var(--ki-error, #dc2626);
 }
-
 
 .ki-helper {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--ki-helper, #6b7280);
   margin-top: 4px;
 }

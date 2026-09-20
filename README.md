@@ -111,6 +111,24 @@ Show fields dynamically based on other values:
 }
 ```
 
+#### AND / OR groups (new in 2.1)
+
+```js
+{
+  name: "taxId",
+  required: true,
+  showIf: {
+    all: [
+      { field: "country", equals: "US" },
+      { field: "plan", equals: "Pro" }
+    ]
+  }
+}
+```
+
+Use `all` (every condition must match) or `any` (at least one). They combine
+with a top-level `field` condition via AND. Hidden fields skip validation.
+
 ---
 
 ## 🎯 Smart Defaults
@@ -183,12 +201,64 @@ const form = useKiForm({
 ## 📋 Supported Features
 
 - JSON-based form builder  
-- Conditional fields  
+- Conditional fields + AND/OR groups  
 - Smart defaults  
+- Theme tokens (CSS variables)  
+- Zod schema generation  
 - Minimal API  
 - React + Next.js support  
 - Extendable component system  
 - Built-in UI  
+
+---
+
+## 🎨 Theming (new in 2.1)
+
+Pass visual tokens — they become `--ki-*` CSS variables on the form element:
+
+```jsx
+<KiForm
+  fields={["email", "password"]}
+  theme={{
+    accentColor: "#8b5cf6",
+    radius: "12px",
+    borderColor: "#334155"
+  }}
+/>
+```
+
+Available tokens: `accentColor`, `borderColor`, `errorColor`, `helperColor`,
+`radius`, `surfaceColor`, `textColor`, `fontFamily`. Defaults match the
+built-in styles, so no theme = zero visual change.
+
+---
+
+## 🧩 Zod Schema Generation (new in 2.1)
+
+Generate a validation schema from the same field config — using your own zod:
+
+```jsx
+import { KiForm } from "ki-forms"
+import { buildZodSchema } from "ki-forms/zod"
+import { z } from "zod"
+
+const fields = [
+  { name: "email", type: "email", required: true },
+  { name: "company", showIf: { field: "role", equals: "Admin" } }
+]
+
+<KiForm
+  fields={fields}
+  schema={buildZodSchema(fields, {
+    zod: z,
+    requiredWhen: { company: { field: "role", equals: "Admin" } }
+  })}
+  onSubmit={save}
+/>
+```
+
+`requiredWhen` reuses `showIf` semantics: the field becomes required exactly
+when it would be shown. Works with zod v3 and v4.
 
 ---
 

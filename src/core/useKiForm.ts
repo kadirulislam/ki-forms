@@ -45,8 +45,10 @@ export function useKiForm(options: UseKiFormOptions): FormApi {
     if (schema?.safeParse) {
       const result = schema.safeParse(values)
       if (!result.success) {
-        for (const err of result.error.errors) {
-          const key = err.path[0]
+        // zod v3 exposes error.errors; zod v4 renamed it to error.issues.
+        const issues = result.error.errors ?? result.error.issues ?? []
+        for (const err of issues) {
+          const key = err.path?.[0]
           if (key) newErrors[key] = err.message
         }
       }
