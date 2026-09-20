@@ -31,6 +31,9 @@ jobs:
       - name: Build demo
         run: npm run demo:build
 
+      - name: Build studio
+        run: npm run studio:build
+
   deploy-demo:
     needs: test
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
@@ -52,8 +55,8 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Build demo (single self-contained HTML)
-        run: npm run demo:build
+      - name: Build demo + studio (self-contained HTML)
+        run: npm run pages:build
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

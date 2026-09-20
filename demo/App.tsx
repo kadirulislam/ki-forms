@@ -210,6 +210,7 @@ function Demo() {
         <div className="hero-actions">
           <a className="btn btn-primary" href="#playground">Try the forms</a>
           <a className="btn" href="#controlled">Controlled mode</a>
+          <a className="btn" href="../studio/">Open Schema Studio ↗</a>
         </div>
       </header>
 

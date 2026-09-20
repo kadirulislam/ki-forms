@@ -5,9 +5,13 @@ Build dynamic React forms from JSON — with zero setup.
 Stop wiring forms manually. Define them as data.
 
 [![Live Demo](https://img.shields.io/badge/⚡_TRY_IT_LIVE-demo-8b5cf6?style=for-the-badge&labelColor=0f172a)](https://kadirulislam.github.io/ki-forms/)
+[![Schema Studio](https://img.shields.io/badge/🧩_SCHEMA_STUDIO-build_visually-6366f1?style=for-the-badge&labelColor=0f172a)](https://kadirulislam.github.io/ki-forms/studio/)
 
 > **Interactive playground** — every feature (conditionals, themes, conversational
 > mode, the live schema editor) running the real library. No install needed.
+>
+> **Schema Studio** — design forms visually: drag-and-drop fields, edit properties
+> with live preview, then copy the schema JSON or a ready-to-paste React component.
 
 ---
 
