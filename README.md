@@ -4,6 +4,11 @@ Build dynamic React forms from JSON — with zero setup.
 
 Stop wiring forms manually. Define them as data.
 
+[![Live Demo](https://img.shields.io/badge/⚡_TRY_IT_LIVE-demo-8b5cf6?style=for-the-badge&labelColor=0f172a)](https://kadirulislam.github.io/ki-forms/)
+
+> **Interactive playground** — every feature (conditionals, themes, conversational
+> mode, the live schema editor) running the real library. No install needed.
+
 ---
 
 ## ⚡ Quick Example
