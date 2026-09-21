@@ -32,11 +32,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
-    "demo": "vite demo",
-    "demo:build": "vite build --config vite.demo.config.ts",
+    "docs": "vite website",
     "studio": "vite --config vite.studio.config.ts",
     "studio:build": "vite build --config vite.studio.config.ts",
-    "pages:build": "npm run demo:build && npm run studio:build",
+    "docs:build": "vite build --config vite.docs.config.ts",
+    "pages:build": "npm run docs:build && npm run studio:build",
     "clean": "rm -rf dist"
   },
   "keywords": [

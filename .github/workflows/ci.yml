@@ -28,8 +28,8 @@ jobs:
       - name: Build library
         run: npm run build
 
-      - name: Build demo
-        run: npm run demo:build
+      - name: Build docs
+        run: npm run docs:build
 
       - name: Build studio
         run: npm run studio:build
@@ -55,7 +55,7 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Build demo + studio (self-contained HTML)
+      - name: Build docs + studio (self-contained HTML)
         run: npm run pages:build
 
       - name: Upload Pages artifact

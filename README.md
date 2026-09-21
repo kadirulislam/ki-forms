@@ -1,355 +1,178 @@
 # ki-forms
 
-Build dynamic React forms from JSON — with zero setup.
+Build forms visually, export real React, and keep ownership of the implementation.
 
-Stop wiring forms manually. Define them as data.
+ki-forms is a developer-first React form renderer for portable field schemas. Define a form as data, preview it in Schema Studio, export readable TypeScript or JavaScript, and keep the final code in your application.
 
-[![Live Demo](https://img.shields.io/badge/⚡_TRY_IT_LIVE-demo-8b5cf6?style=for-the-badge&labelColor=0f172a)](https://kadirulislam.github.io/ki-forms/)
-[![Schema Studio](https://img.shields.io/badge/🧩_SCHEMA_STUDIO-build_visually-6366f1?style=for-the-badge&labelColor=0f172a)](https://kadirulislam.github.io/ki-forms/studio/)
+[Documentation](https://kadirulislam.github.io/ki-forms/) · [Schema Studio](https://kadirulislam.github.io/ki-forms/studio/) · [GitHub](https://github.com/kadirulislam/ki-forms)
 
-> **Interactive playground** — every feature (conditionals, themes, conversational
-> mode, the live schema editor) running the real library. No install needed.
->
-> **Schema Studio** — design forms visually: drag-and-drop fields, edit properties
-> with live preview, then copy the schema JSON or a ready-to-paste React component.
+## The workflow
 
----
-
-## ⚡ Quick Example
-
-```jsx
-import { KiForm } from "ki-forms"
-import "ki-forms/styles.css"
-
-export default function App() {
-  return (
-    <KiForm
-      fields={[
-        "email",
-        "password",
-        {
-          name: "role",
-          options: ["User", "Admin"]
-        },
-        {
-          name: "company",
-          showIf: { field: "role", equals: "Admin" }
-        }
-      ]}
-      onSubmit={(data) => console.log(data)}
-    />
-  )
-}
+```text
+Studio -> canonical schema -> TypeScript/JavaScript -> KiForm runtime
 ```
 
----
+The same schema drives rendering, conditional logic, validation integration, Studio preview, and generated code. The Studio is an authoring tool, not a hosted form platform.
 
-## 🤯 The Problem
-
-Building forms in React is repetitive and inefficient:
-
-- Managing state for every input  
-- Handling validation manually  
-- Writing conditional logic  
-- Repeating boilerplate code  
-
-Even popular libraries like React Hook Form require setup and mental overhead.
-
----
-
-## ✅ The Solution
-
-ki-forms lets you build forms using simple JSON.
-
-- No manual state handling  
-- No boilerplate  
-- No complex configuration  
-
-Just describe your form → it renders automatically.
-
----
-
-## 📦 Installation
+## Install
 
 ```bash
 npm install ki-forms
 ```
 
----
-
-## 🚀 Basic Usage
-
-```jsx
+```tsx
 import { KiForm } from "ki-forms"
 import "ki-forms/styles.css"
-
-<KiForm
-  fields={["email", "password"]}
-  onSubmit={(data) => console.log(data)}
-/>
-```
-
----
-
-## 🧩 Field Configuration
-
-```js
-{
-  name: "email",
-  type: "email", // "text" | "textarea" | "email" | "password" | "number" | "select" | "checkbox" | "tel" | "url" | "date"
-  required: true,
-  label: "Email",
-  placeholder: "Enter your email",
-  helperText: "We never share your email"
-}
-```
-
----
-
-## 🔄 Conditional Fields
-
-Show fields dynamically based on other values:
-
-```js
-{
-  name: "company",
-  showIf: {
-    field: "role",
-    equals: "Admin"
-  }
-}
-```
-
-#### AND / OR groups (new in 2.1)
-
-```js
-{
-  name: "taxId",
-  required: true,
-  showIf: {
-    all: [
-      { field: "country", equals: "US" },
-      { field: "plan", equals: "Pro" }
-    ]
-  }
-}
-```
-
-Use `all` (every condition must match) or `any` (at least one). They combine
-with a top-level `field` condition via AND. Hidden fields skip validation.
-
----
-
-## 🎯 Smart Defaults
-
-ki-forms automatically:
-
-- Infers input types (`email`, `password`)  
-- Generates labels (`firstName → First Name`)  
-- Adds placeholders (`Enter your email`)  
-- Converts simple strings into fields  
-
-```jsx
-fields={["email", "password"]}
-```
-
----
-
-## 🧠 Field Events
-
-Run logic when field value changes:
-
-```js
-{
-  name: "role",
-  options: ["User", "Admin"],
-  onChange: (value, values) => {
-    console.log("Selected:", value)
-    console.log("All values:", values)
-  }
-}
-```
-
----
-
-## 🎨 Styling
-
-Default styles included:
-
-```js
-import "ki-forms/styles.css"
-```
-
-Override using `className`:
-
-```js
-{
-  name: "email",
-  className: "my-custom-input"
-}
-```
-
----
-
-## ⚙️ Advanced Usage
-
-Use the form hook directly:
-
-```jsx
-import { useKiForm, KiForm } from "ki-forms"
-
-const form = useKiForm({
-  fields: ["email", "password"]
-})
-
-<KiForm form={form} />
-```
-
----
-
-## 📋 Supported Features
-
-- JSON-based form builder  
-- Conditional fields + AND/OR groups  
-- Smart defaults  
-- Theme tokens (CSS variables)  
-- Zod schema generation  
-- Minimal API  
-- React + Next.js support  
-- Extendable component system  
-- Built-in UI  
-
-### Supported field types
-
-`text`, `email`, `password`, `number`, `tel`, `url`, `date`, `textarea`, `select`, and `checkbox`.
-
-### Custom field components
-
-Replace or extend built-in renderers with the `components` prop. A custom component receives the field definition, current value, validation error, and an `onChange` callback:
-
-```jsx
-function RatingField({ field, value, onChange, error }) {
-  return (
-    <div>
-      <input
-        type="range"
-        min="1"
-        max="5"
-        value={value ?? 1}
-        onChange={(event) => onChange(Number(event.target.value))}
-      />
-      {error && <p>{error}</p>}
-    </div>
-  )
-}
-
-<KiForm
-  fields={[{ name: "rating", type: "text" }]}
-  components={{ text: RatingField }}
-/>
-```
-
-For the complete public API, see the exported TypeScript types: `Field`, `KiFormProps`, `FormApi`, `KiTheme`, and `SubmitEndpointResult`.
-
----
-
-## 🎨 Theming (new in 2.1)
-
-Pass visual tokens — they become `--ki-*` CSS variables on the form element:
-
-```jsx
-<KiForm
-  fields={["email", "password"]}
-  theme={{
-    accentColor: "#8b5cf6",
-    radius: "12px",
-    borderColor: "#334155"
-  }}
-/>
-```
-
-Available tokens: `accentColor`, `borderColor`, `errorColor`, `helperColor`,
-`radius`, `surfaceColor`, `textColor`, `fontFamily`. Defaults match the
-built-in styles, so no theme = zero visual change.
-
----
-
-## 🧩 Zod Schema Generation (new in 2.1)
-
-Generate a validation schema from the same field config — using your own zod:
-
-```jsx
-import { KiForm } from "ki-forms"
-import { buildZodSchema } from "ki-forms/zod"
-import { z } from "zod"
 
 const fields = [
   { name: "email", type: "email", required: true },
-  { name: "company", showIf: { field: "role", equals: "Admin" } }
-]
+  { name: "role", type: "select", options: ["User", "Admin"] },
+  {
+    name: "company",
+    showIf: { field: "role", equals: "Admin" },
+    required: true,
+  },
+] as const
 
+export function SignupForm() {
+  return <KiForm fields={fields} onSubmit={(values) => save(values)} />
+}
+```
+
+## Why ki-forms?
+
+Use ki-forms when you want a small renderer, a visual schema authoring workflow, and generated React code that your team owns.
+
+It is not intended to clone SurveyJS, Form.io, or RJSF. React Hook Form remains a strong choice for highly custom application-controlled form state. Larger schema platforms remain better for hosted surveys, enterprise field catalogs, and account-based form management.
+
+## Canonical fields
+
+Supported field types are `text`, `email`, `password`, `number`, `tel`, `url`, `date`, `textarea`, `select`, and `checkbox`.
+
+```ts
+{
+  name: "email",
+  type: "email",
+  required: true,
+  label: "Work email",
+  placeholder: "you@example.com",
+  helperText: "We never share your email",
+}
+```
+
+String shorthand is available for simple text-like fields:
+
+```tsx
+<KiForm fields={["email", "password"]} onSubmit={save} />
+```
+
+## Conditions: one source of truth
+
+`showIf` controls visibility and conditional validation. `required: true` means required when the field is visible. Do not repeat the condition in a separate `requiredWhen` configuration.
+
+```ts
+{
+  name: "company",
+  showIf: { field: "role", equals: "Admin" },
+  required: true,
+}
+```
+
+Groups use `all` or `any`:
+
+```ts
+{
+  name: "taxId",
+  showIf: {
+    all: [
+      { field: "country", equals: "US" },
+      { field: "plan", equals: "Pro" },
+    ],
+  },
+  required: true,
+}
+```
+
+The legacy `requiredWhen` option is retained only for compatibility and is deprecated. New schemas, Studio exports, and generated code use `showIf` plus `required`.
+
+## TypeScript
+
+Static field definitions can infer form values:
+
+```tsx
+import type { InferFormValues } from "ki-forms"
+
+const fields = [
+  { name: "email", type: "email", required: true },
+  { name: "age", type: "number" },
+] as const
+
+type Values = InferFormValues<typeof fields>
+
+function save(values: Values) {
+  values.email
+  values.age
+}
+```
+
+Schemas loaded from an API or database cannot create compile-time types by themselves. Validate dynamic data at the application boundary and provide an explicit type where needed.
+
+## Zod
+
+Use your own Zod instance through the optional adapter:
+
+```tsx
+import { buildZodSchema } from "ki-forms/zod"
+import { z } from "zod"
+
+const schema = buildZodSchema(fields, { zod: z })
+
+<KiForm fields={fields} schema={schema} onSubmit={save} />
+```
+
+`buildZodSchema` is a convenience for config-first forms. Use a code-first Zod schema when complex refinements or maximum inference matter. Conditional requiredness is derived from each field's `showIf` and `required` properties.
+
+## Studio and export
+
+Schema Studio lets you add and reorder fields, edit properties, preview the real runtime, and copy schema JSON or React code. The generated code is intended to be copied into a real application and owned there.
+
+Arbitrary callbacks such as `onChange` are application code, not portable JSON. They are not round-tripped by the Studio schema export.
+
+## Endpoint submissions
+
+An `endpoint` sends `{ values, meta }` from the browser:
+
+```tsx
+<KiForm fields={fields} endpoint="https://example.com/public-form-endpoint" />
+```
+
+The URL is visible to users and must not contain secrets. For private webhooks or API keys, submit to your own server and let the server forward the request. Google Apps Script, Formspree, Web3Forms, Basin, and compatible public JSON endpoints are supported.
+
+## Styling
+
+Import the built-in stylesheet, then override visual tokens:
+
+```tsx
 <KiForm
   fields={fields}
-  schema={buildZodSchema(fields, {
-    zod: z,
-    requiredWhen: { company: { field: "role", equals: "Admin" } }
-  })}
-  onSubmit={save}
+  theme={{ accentColor: "#4f46e5", radius: "10px", surfaceColor: "#fff" }}
 />
 ```
 
-`requiredWhen` reuses `showIf` semantics: the field becomes required exactly
-when it would be shown. Works with zod v3 and v4.
+Use a field `className` for application-specific styling.
 
----
+## Scope and roadmap
 
-## 💬 Conversational Mode (new in 2.1)
+The current core focuses on flat, JSON-serializable forms. Nested objects, repeatable field arrays, and file uploads are intentionally deferred until they can be designed consistently across the schema, runtime, Studio, TypeScript, Zod, export, and submission layers.
 
-One question at a time, Typeform-style — with a progress bar, Back/Next,
-Enter-to-advance, and automatic jump-back to a failing step:
+## Development
 
-```jsx
-<KiForm
-  fields={fields}
-  variant="conversational"
-  stepLabels={{ next: "Continue", submit: "Send it" }}
-  onSubmit={save}
-/>
+```bash
+npm test
+npm run typecheck
+npm run build
+npm run docs:build
+npm run studio:build
 ```
 
-Hidden conditional fields are skipped automatically. Enter inside a textarea
-inserts a newline instead of advancing.
-
----
-
-## 📥 Collect Responses (new in 2.2)
-
-No backend? Add `endpoint` and every valid submit is POSTed as JSON — no server
-actions, no wiring:
-
-```jsx
-<KiForm
-  fields={fields}
-  endpoint="https://script.google.com/macros/s/…/exec"
-  submitLabel="Sign up"
-/>
-```
-
-- Payload: `{ values, meta }` — `meta` carries `submittedAt`, `pageUrl`, `referrer`, `userAgent`.
-- Built-in pending/success/error status line (fully re-labelable, or hide it with `hideSubmitStatus`).
-- Works with **Formspree, Web3Forms, Basin, Discord/automation webhooks** — anything that accepts a JSON POST.
-- **Google Sheets with zero code**: the Schema Studio generates a ~50-line Apps Script — paste it into your Sheet once, connect the `/exec` URL, and every submission lands as a row. (Apps Script can't answer CORS preflights, so ki-forms automatically sends those endpoints as `text/plain` — no config needed.)
-- `onSubmit` still fires as before; `onSubmitted(result)` reports the request outcome.
-
-New props: `endpoint`, `method` (default `POST`), `headers`, `submitLabel`, `submittingLabel`, `successLabel`, `errorLabel`, `hideSubmitStatus`, `onSubmitted`.
-
----
-
-## ⚖️ Comparison
-
-| Feature           | ki-forms | React Hook Form |
-|------------------|---------|----------------|
-| Setup            | Zero    | Medium         |
-| Boilerplate      | Low     | Medium         |
-| Dynamic forms    | Built-in | Manual        |
-| Learning curve   | Very Low | Medium        |
+The project is MIT licensed.
