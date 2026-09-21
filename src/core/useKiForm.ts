@@ -1,10 +1,10 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { applyDefaults } from "../utils/defaults"
 import { shouldShow } from "../utils/conditions"
 import { Field, FieldInput, FormApi, FormValues, UseKiFormOptions } from "../types"
 
-export function useKiForm(options: UseKiFormOptions): FormApi {
-  const { fields, onSubmit, schema } = options
+export function useKiForm<TValues extends FormValues = FormValues>(options: UseKiFormOptions<TValues>): FormApi<TValues> {
+  const { fields = [], onSubmit, schema } = options
 
   const normalizedFields: Field[] = fields
     .map((f: FieldInput) =>
@@ -13,22 +13,38 @@ export function useKiForm(options: UseKiFormOptions): FormApi {
     .map(applyDefaults)
 
   const initialValues = normalizedFields.reduce((acc, field) => {
-    acc[field.name] = field.defaultValue ?? ""
+    acc[field.name] = field.defaultValue ?? (field.type === "checkbox" ? false : "")
     return acc
   }, {} as FormValues)
 
   const [values, setValues] = useState<FormValues>(initialValues)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  function setValue(name: string, value: any) {
-    setValues((prev) => {
-      const updated = { ...prev, [name]: value }
-
-      const field = normalizedFields.find(f => f.name === name)
-      field?.onChange?.(value, updated)
-
-      return updated
+  useEffect(() => {
+    const names = new Set(normalizedFields.map((field) => field.name))
+    setValues((previous) => {
+      const next: FormValues = {}
+      for (const field of normalizedFields) {
+        next[field.name] = field.name in previous
+          ? previous[field.name]
+          : field.defaultValue ?? (field.type === "checkbox" ? false : "")
+      }
+      return Object.keys(next).length === Object.keys(previous).length &&
+        Object.keys(next).every((name) => next[name] === previous[name]) ? previous : next
     })
+    setErrors((previous) => {
+      const next = Object.fromEntries(Object.entries(previous).filter(([name]) => names.has(name)))
+      return Object.keys(next).length === Object.keys(previous).length ? previous : next
+    })
+  }, [normalizedFields])
+
+  function setValue(name: string, value: unknown) {
+    const field = normalizedFields.find(f => f.name === name)
+    const updated = { ...values, [name]: value }
+    setValues((prev) => {
+      return { ...prev, [name]: value }
+    })
+    field?.onChange?.(value, updated)
   }
 
   /** Validate all visible fields, update the error map, return pass/fail (2.2.0). */
@@ -38,7 +54,7 @@ export function useKiForm(options: UseKiFormOptions): FormApi {
     for (const field of normalizedFields) {
       if (!shouldShow(field, values)) continue
 
-      if (field.required && !values[field.name]) {
+      if (field.required && isEmptyValue(field, values[field.name])) {
         newErrors[field.name] = `${field.label} is required`
       }
     }
@@ -50,7 +66,8 @@ export function useKiForm(options: UseKiFormOptions): FormApi {
         const issues = result.error.errors ?? result.error.issues ?? []
         for (const err of issues) {
           const key = err.path?.[0]
-          if (key) newErrors[key] = err.message
+          const dependent = normalizedFields.find((field) => field.name === key)
+          if (key && dependent && shouldShow(dependent, values)) newErrors[key] = err.message
         }
       }
     }
@@ -66,7 +83,7 @@ export function useKiForm(options: UseKiFormOptions): FormApi {
     if (!field || !shouldShow(field, values)) return true
 
     let error: string | undefined
-    if (field.required && !values[field.name]) {
+    if (field.required && isEmptyValue(field, values[field.name])) {
       error = `${field.label} is required`
     } else if (schema?.safeParse) {
       const result = schema.safeParse(values)
@@ -95,20 +112,20 @@ export function useKiForm(options: UseKiFormOptions): FormApi {
     const isValid = validate()
     if (!isValid) return
 
-    onSubmit?.(values)
+    onSubmit?.(values as TValues)
   }
 
   function handleSubmitChecked(e?: React.FormEvent): boolean {
     if (e) e.preventDefault()
     const isValid = validate()
     if (!isValid) return false
-    onSubmit?.(values)
+    onSubmit?.(values as TValues)
     return true
   }
 
   return {
     fields: normalizedFields,
-    values,
+    values: values as TValues,
     errors,
     setValue,
     handleSubmit,
@@ -116,4 +133,10 @@ export function useKiForm(options: UseKiFormOptions): FormApi {
     validate,
     handleSubmitChecked
   }
+}
+
+function isEmptyValue(field: Field, value: unknown): boolean {
+  if (field.type === "checkbox") return value !== true
+  if (field.type === "number") return value === "" || value === undefined || value === null || Number.isNaN(value)
+  return value === "" || value === undefined || value === null || (typeof value === "string" && value.trim() === "")
 }

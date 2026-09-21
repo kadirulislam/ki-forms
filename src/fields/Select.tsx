@@ -2,19 +2,24 @@ import type { FieldComponentProps } from "../types"
 
 export function SelectField({ field, value, onChange, error }: FieldComponentProps) {
   const options = field.options || []
+  const id = `ki-${field.name}`
+  const errorId = `${id}-error`
 
   return (
     <div className="ki-form-item">
       {field.label !== false && (
-        <label className="ki-label">{field.label}</label>
+        <label className="ki-label" htmlFor={id}>{field.label}</label>
       )}
 
       <select
         className={`ki-select ${field.className || ""}`}
-        value={value}
+        id={id}
+        value={typeof value === "boolean" ? "" : (value ?? "")}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? errorId : undefined}
         onChange={(e) => onChange(e.target.value)}
       >
-        <option value="">Select</option>
+         <option value="">Select</option>
 
         {options.map((opt: any, i: number) => {
           const val = typeof opt === "string" ? opt : opt.value
@@ -32,7 +37,7 @@ export function SelectField({ field, value, onChange, error }: FieldComponentPro
         <p className="ki-helper">{field.helperText}</p>
       )}
 
-      {error && <p className="ki-error">{error}</p>}
+      {error && <p id={errorId} className="ki-error">{error}</p>}
     </div>
   )
 }

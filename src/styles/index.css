@@ -45,6 +45,20 @@
   color: var(--ki-error, #dc2626);
 }
 
+.ki-submit {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: var(--ki-radius, 6px);
+  background: var(--ki-accent, #6366f1);
+  color: #fff;
+  cursor: pointer;
+}
+
+.ki-submit[data-busy="true"] {
+  cursor: progress;
+  opacity: 0.7;
+}
+
 .ki-helper {
   font-size: 12px;
   color: var(--ki-helper, #6b7280);

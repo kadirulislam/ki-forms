@@ -12,16 +12,18 @@ export type FieldType =
   | "url"
   | "date"
 
+export type Condition = { field: string; equals?: unknown; notEquals?: unknown }
+
 export type ShowIf = {
-  /** Dependency field. Required for a single condition; omit when using all/any groups. (optional since 2.1.0 — widening, 2.0.0 schemas unchanged) */
+  /** Dependency field. Combined with all/any groups via AND when both are present. */
   field?: string
-  equals?: any
-  notEquals?: any
+  equals?: unknown
+  notEquals?: unknown
 
   /** All of these conditions must match (added in 2.1.0). */
-  all?: { field: string; equals?: any; notEquals?: any }[]
+  all?: Condition[]
   /** At least one of these conditions must match (added in 2.1.0). */
-  any?: { field: string; equals?: any; notEquals?: any }[]
+  any?: Condition[]
 }
 
 /** Visual tokens for the built-in styles (added in 2.1.0). */
@@ -42,18 +44,46 @@ export type Field = {
   label?: string | false
   placeholder?: string
   options?: string[] | { label: string; value: string }[]
-  defaultValue?: any
+  defaultValue?: string | number | boolean
 
   required?: boolean
   showIf?: ShowIf
 
   className?: string
   helperText?: string
-  onChange?: (value: any, values: Record<string, any>) => void
+  onChange?: (value: unknown, values: Record<string, unknown>) => void
 
 }
 
+export type FieldValue<T extends Field> =
+  T["type"] extends "number" ? number :
+  T["type"] extends "checkbox" ? boolean : string
+
+export type InferFormValues<T extends readonly FieldInput[]> = {
+  -readonly [K in T[number] extends infer F
+    ? F extends { name: infer N extends string } ? N : never
+    : never]: Extract<T[number], { name: K }> extends infer F
+      ? F extends Field
+        ? F["required"] extends true ? FieldValue<F> : FieldValue<F> | undefined
+        : string | undefined
+      : never
+}
+
+/** Canonical portable form document shared by runtime, Studio, export, and docs. */
+export type KiFormDocument = {
+  version: 1
+  fields: FieldInput[]
+  name?: string
+  theme?: KiTheme
+  variant?: "classic" | "conversational"
+  endpoint?: string
+}
+
 export type FieldInput = Field | string
+
+export function defineFields<const T extends readonly FieldInput[]>(fields: T): T {
+  return fields
+}
 
 // ---------- Public API surface (added in 2.1.0 — additive only) ----------
 
@@ -80,11 +110,11 @@ export type KiFormSchema = {
 }
 
 /** Props passed to every field components (custom ones included). */
-export type FieldComponentProps = {
+export type FieldComponentProps<TValue = string | number | boolean> = {
   field: Field
-  value: any
+  value: TValue
   error?: string
-  onChange: (value: any) => void
+  onChange: (value: TValue) => void
 }
 
 /** Custom renderer map, keyed by field type. */
@@ -94,11 +124,11 @@ export type KiFormComponents = Partial<Record<FieldType, ComponentType<FieldComp
  * The form controller returned by `useKiForm` and accepted by `<KiForm form={...} />`.
  * FROZEN SHAPE — do not remove or rename keys (compat contract with 2.0.0 users).
  */
-export type FormApi = {
+export type FormApi<TValues extends FormValues = FormValues> = {
   fields: Field[]
-  values: FormValues
+  values: TValues
   errors: Record<string, string>
-  setValue: (name: string, value: any) => void
+  setValue: (name: string, value: unknown) => void
   handleSubmit: (e?: FormEvent) => void
   /** Validate a single visible field (added in 2.1.0 — additions keep the 2.0.0 keys intact) */
   validateField: (name: string) => boolean
@@ -108,9 +138,9 @@ export type FormApi = {
   handleSubmitChecked: (e?: FormEvent) => boolean
 }
 
-export type UseKiFormOptions = {
-  fields: FieldInput[]
-  onSubmit?: (values: FormValues) => void
+export type UseKiFormOptions<TValues extends FormValues = FormValues> = {
+  fields?: FieldInput[]
+  onSubmit?: (values: TValues) => void | Promise<unknown>
   schema?: KiFormSchema
 }
 
@@ -137,14 +167,14 @@ export type SubmitEndpointResult = {
   error?: string
 }
 
-export type KiFormProps = {
-  fields?: FieldInput[]
+export type KiFormProps<TValues extends FormValues = FormValues, TFields extends readonly FieldInput[] = FieldInput[]> = {
+  fields?: TFields
   /** Widened in 2.2.0: async handlers are allowed. Called on every valid submit. */
-  onSubmit?: (values: FormValues) => void | Promise<unknown>
+  onSubmit?: (values: TValues) => void | Promise<unknown>
   schema?: KiFormSchema
   className?: string
   components?: KiFormComponents
-  form?: FormApi
+  form?: FormApi<TValues>
   /** Visual tokens mapped to --ki-* CSS variables (added in 2.1.0). */
   theme?: KiTheme
   /** "conversational" renders one field per step (added in 2.1.0). Default: "classic". */

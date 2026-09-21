@@ -68,7 +68,21 @@ function StatusLine({
 }
 
 export function KiForm(props: KiFormProps) {
-  const form = props.form || useKiForm(props as never)
+  if (props.form) return <ControlledKiForm {...props} form={props.form} />
+  return <ManagedKiForm {...props} />
+}
+
+function ManagedKiForm(props: KiFormProps) {
+  const form = useKiForm(props)
+  return <KiFormView {...props} form={form} />
+}
+
+function ControlledKiForm(props: KiFormProps & { form: NonNullable<KiFormProps["form"]> }) {
+  return <KiFormView {...props} form={props.form} />
+}
+
+function KiFormView(props: KiFormProps & { form: NonNullable<KiFormProps["form"]> }) {
+  const form = props.form
   const endpointCtl = useSubmitEndpoint(props)
   const hasEndpoint = typeof props.endpoint === "string" && props.endpoint.length > 0
 
@@ -101,15 +115,8 @@ export function KiForm(props: KiFormProps) {
     <button
       type="submit"
       disabled={busy}
-      style={{
-        padding: "8px 14px",
-        borderRadius: "6px",
-        border: "none",
-        background: "#111827",
-        color: "#fff",
-        cursor: busy ? "progress" : "pointer",
-        opacity: busy ? 0.7 : 1,
-      }}
+      className="ki-submit"
+      data-busy={busy || undefined}
     >
       {busy
         ? (props.submittingLabel ?? "Submitting…")
