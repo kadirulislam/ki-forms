@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { validateSchema } from "../studio/lib/schema"
+import { validateSchema, parseDocumentImport } from "../studio/lib/schema"
 
 describe("validateSchema", () => {
   it("rejects non-array input", () => {
@@ -103,5 +103,43 @@ describe("validateSchema", () => {
     const r = validateSchema([{ name: "ok" }, { name: "" }])
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.error).toContain("Field 2")
+  })
+})
+
+describe("parseDocumentImport", () => {
+  it("accepts a bare field array as fields-only import", () => {
+    const r = parseDocumentImport([{ name: "email", type: "email" }])
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.doc.fields).toHaveLength(1)
+      expect(r.doc.variant).toBe("classic")
+      expect(r.doc.endpoint).toBeUndefined()
+    }
+  })
+
+  it("accepts a full document with theme, variant, and endpoint", () => {
+    const r = parseDocumentImport({
+      version: 1,
+      name: "Signup",
+      fields: [{ name: "email", type: "email" }],
+      theme: { accentColor: "#4f46e5" },
+      variant: "conversational",
+      endpoint: "https://example.com/hook",
+    })
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.doc.title).toBe("Signup")
+      expect(r.doc.theme).toEqual({ accentColor: "#4f46e5" })
+      expect(r.doc.variant).toBe("conversational")
+      expect(r.doc.endpoint).toBe("https://example.com/hook")
+    }
+  })
+
+  it("rejects invalid documents without applying anything", () => {
+    expect(parseDocumentImport({ fields: [{ name: "" }] }).ok).toBe(false)
+    expect(parseDocumentImport({ fields: [{ name: "a" }], variant: "nope" }).ok).toBe(false)
+    expect(parseDocumentImport({ fields: [{ name: "a" }], endpoint: "javascript:alert(1)" }).ok).toBe(false)
+    expect(parseDocumentImport("nope").ok).toBe(false)
+    expect(parseDocumentImport(null).ok).toBe(false)
   })
 })

@@ -398,11 +398,20 @@ export default function App() {
     [update],
   )
 
-  const applyJson = useCallback(
-    (fields: Field[]) => {
-      update((d) => ({ ...d, fields }))
+  const applyDocument = useCallback(
+    (doc: { title?: string; fields: Field[]; theme: KiTheme; variant: Variant; endpoint?: string }) => {
+      // Imported themes are explicit tokens, so any active preset no longer applies.
+      setPreset(null)
+      update((d) => ({
+        ...d,
+        ...(doc.title ? { title: doc.title } : {}),
+        fields: doc.fields,
+        theme: doc.theme,
+        variant: doc.variant,
+        endpoint: doc.endpoint,
+      }))
       setSelected(null)
-      toast.success("Schema applied successfully")
+      toast.success("Document applied successfully")
     },
     [update],
   )
@@ -1074,7 +1083,7 @@ export default function App() {
             theme={doc.theme}
             variant={doc.variant}
             endpoint={doc.endpoint}
-            onApplyJson={applyJson}
+            onApplyDocument={applyDocument}
             onClose={() => setModal("none")}
           />
         )}

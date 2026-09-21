@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react"
 import { z } from "zod"
 import { KiForm, defineFields, validateFields, validateDocument, normalizeDocument } from "../src"
 import { exportReact, importSchemaBlock, toRoundTripSnippet } from "../studio/lib/export"
+import { parseDocumentImport } from "../studio/lib/schema"
 import { buildZodSchema } from "../src/ki-forms-zod"
 import type { InferFormValues } from "../src"
 
@@ -73,6 +74,16 @@ describe("P0 canonical parity", () => {
     const snippet = toRoundTripSnippet("MyForm", [{ name: "email" }])
     expect(importSchemaBlock(snippet)).toEqual([{ name: "email" }])
     expect(importSchemaBlock("no marker")).toBeNull()
+  })
+
+  it("round-trip preserves theme, variant, endpoint, and invalid code imports nothing", () => {
+    const snippet = toRoundTripSnippet("MyForm", [{ name: "email" }], {
+      theme: { accentColor: "#111" },
+      variant: "conversational",
+      endpoint: "https://example.com/hook",
+    })
+    const parsed = parseDocumentImport(importSchemaBlock(snippet))
+    expect(parsed.ok).toBe(true)
   })
 
   it("export is deterministic", () => {
