@@ -1,4 +1,4 @@
-import type { Field, FieldType } from "../../src/types"
+import type { Condition, Field, FieldType, ShowIf } from "../../src/types"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Switch } from "./ui/switch"
@@ -131,74 +131,7 @@ export function Inspector({ field, otherFields, onChange, onDuplicate, onDelete 
 
       <Separator />
 
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-xs text-muted-foreground">Show only if</Label>
-        <div className="flex flex-col gap-1.5">
-          <Select
-            value={field.showIf?.field || ""}
-            onValueChange={(v) =>
-              onChange({
-                showIf: v === "" ? undefined : { field: v, equals: "" },
-              })
-            }
-          >
-            <SelectTrigger className="h-8">
-              <SelectValue placeholder="(always visible)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">(always visible)</SelectItem>
-              {otherFields.map((f) => (
-                <SelectItem key={f.name} value={f.name}>
-                  {f.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {field.showIf?.field && (
-            <>
-              <Select
-                value={field.showIf.equals !== undefined ? "equals" : "notEquals"}
-                onValueChange={(v) =>
-                  onChange({
-                    showIf: {
-                      field: field.showIf!.field!,
-                      ...(v === "equals"
-                        ? { equals: field.showIf!.notEquals }
-                        : { notEquals: field.showIf!.equals }),
-                    },
-                  })
-                }
-              >
-                <SelectTrigger className="h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="equals">equals</SelectItem>
-                  <SelectItem value="notEquals">not equals</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input
-                placeholder="value"
-                className="h-8"
-                value={
-                  field.showIf.equals !== undefined ? String(field.showIf.equals) : String(field.showIf.notEquals)
-                }
-                onChange={(e) =>
-                  onChange({
-                    showIf: {
-                      field: field.showIf!.field!,
-                      ...(field.showIf!.equals !== undefined
-                        ? { equals: e.target.value }
-                        : { notEquals: e.target.value }),
-                    },
-                  })
-                }
-              />
-            </>
-          )}
-        </div>
-        <p className="text-[11px] text-muted-foreground">AND/OR groups can be edited in the JSON tab.</p>
-      </div>
+      <ConditionEditor field={field} otherFields={otherFields} onChange={onChange} />
 
       <Separator />
 
@@ -215,6 +148,255 @@ export function Inspector({ field, otherFields, onChange, onDuplicate, onDelete 
           <Trash2 /> Delete
         </Button>
       </div>
+    </div>
+  )
+}
+
+type ConditionMode = "always" | "single" | "all" | "any"
+
+function getMode(showIf: ShowIf | undefined): ConditionMode {
+  if (!showIf) return "always"
+  if (showIf.any) return "any"
+  if (showIf.all) return "all"
+  return "single"
+}
+
+function singleOf(showIf: ShowIf | undefined): Condition | undefined {
+  if (!showIf?.field) return undefined
+  return showIf.equals !== undefined
+    ? { field: showIf.field, equals: showIf.equals }
+    : { field: showIf.field, notEquals: showIf.notEquals }
+}
+
+function describeValue(value: unknown): string {
+  return typeof value === "string" ? `"${value}"` : String(value)
+}
+
+function summarize(showIf: ShowIf | undefined): string | null {
+  if (!showIf) return null
+  const parts: string[] = []
+  const single = singleOf(showIf)
+  if (single) {
+    parts.push(
+      single.equals !== undefined
+        ? `${single.field} === ${describeValue(single.equals)}`
+        : `${single.field} !== ${describeValue(single.notEquals)}`,
+    )
+  }
+  const group = (conditions: Condition[], joiner: string) =>
+    conditions
+      .map((c) =>
+        c.equals !== undefined
+          ? `${c.field} === ${describeValue(c.equals)}`
+          : `${c.field} !== ${describeValue(c.notEquals)}`,
+      )
+      .join(` ${joiner} `)
+  if (showIf.all) parts.push(showIf.all.length > 1 ? `(${group(showIf.all, "AND")})` : group(showIf.all, "AND"))
+  if (showIf.any) parts.push(showIf.any.length > 1 ? `(${group(showIf.any, "OR")})` : group(showIf.any, "OR"))
+  return parts.length > 0 ? parts.join(" AND ") : null
+}
+
+function ConditionRow({
+  condition,
+  selfName,
+  knownNames,
+  otherFields,
+  onPatch,
+  onRemove,
+  canRemove,
+}: {
+  condition: Condition
+  selfName: string
+  knownNames: Set<string>
+  otherFields: Field[]
+  onPatch: (next: Condition) => void
+  onRemove: () => void
+  canRemove: boolean
+}) {
+  const operator = condition.equals !== undefined ? "equals" : "notEquals"
+  const missing = !knownNames.has(condition.field)
+  const circular = condition.field === selfName
+  return (
+    <div className="flex flex-col gap-1.5 rounded-md border border-border/60 p-2">
+      <div className="flex gap-1.5">
+        <Select value={condition.field} onValueChange={(v) => onPatch({ ...condition, field: v })}>
+          <SelectTrigger className="h-8 flex-1">
+            <SelectValue placeholder="field" />
+          </SelectTrigger>
+          <SelectContent>
+            {missing && (
+              <SelectItem value={condition.field}>
+                {condition.field} (missing)
+              </SelectItem>
+            )}
+            {otherFields.map((f) => (
+              <SelectItem key={f.name} value={f.name}>
+                {f.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {canRemove && (
+          <Button variant="ghost" size="sm" aria-label="Remove condition" onClick={onRemove} className="h-8 px-2">
+            <Trash2 className="size-3.5" />
+          </Button>
+        )}
+      </div>
+      <div className="flex gap-1.5">
+        <Select
+          value={operator}
+          onValueChange={(v) =>
+            onPatch(
+              v === "equals"
+                ? { field: condition.field, equals: condition.notEquals ?? "" }
+                : { field: condition.field, notEquals: condition.equals ?? "" },
+            )
+          }
+        >
+          <SelectTrigger className="h-8 w-28">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="equals">equals</SelectItem>
+            <SelectItem value="notEquals">not equals</SelectItem>
+          </SelectContent>
+        </Select>
+        <Input
+          placeholder="value"
+          className="h-8 flex-1"
+          value={operator === "equals" ? String(condition.equals ?? "") : String(condition.notEquals ?? "")}
+          onChange={(e) =>
+            onPatch(
+              operator === "equals"
+                ? { field: condition.field, equals: e.target.value }
+                : { field: condition.field, notEquals: e.target.value },
+            )
+          }
+        />
+      </div>
+      {circular && (
+        <p className="text-[11px] text-destructive">Depends on itself — this condition can never match.</p>
+      )}
+      {!circular && missing && (
+        <p className="text-[11px] text-destructive">Unknown field — the condition never matches until the field exists.</p>
+      )}
+    </div>
+  )
+}
+
+function ConditionEditor({
+  field,
+  otherFields,
+  onChange,
+}: {
+  field: Field
+  otherFields: Field[]
+  onChange: (patch: Partial<Field>) => void
+}) {
+  const showIf = field.showIf
+  const mode = getMode(showIf)
+  const knownNames = new Set(otherFields.map((f) => f.name))
+  const summary = summarize(showIf)
+  const blankField = otherFields[0]?.name ?? ""
+
+  const setMode = (next: ConditionMode) => {
+    if (next === "always") {
+      onChange({ showIf: undefined })
+      return
+    }
+    const single = singleOf(showIf)
+    const first: Condition = single ?? { field: blankField, equals: "" }
+    if (next === "single") {
+      onChange({ showIf: { field: first.field, ...(first.equals !== undefined ? { equals: first.equals } : { notEquals: first.notEquals }) } })
+      return
+    }
+    const existing = next === "all" ? (showIf?.all ?? []) : (showIf?.any ?? [])
+    const seed = existing.length > 0 ? existing : [first]
+    // A top-level single condition is preserved alongside the group (combined via AND).
+    const top = single
+      ? { field: single.field, ...(single.equals !== undefined ? { equals: single.equals } : { notEquals: single.notEquals }) }
+      : {}
+    onChange(next === "all" ? { showIf: { ...top, all: seed } } : { showIf: { ...top, any: seed } })
+  }
+
+  const asSingle = (condition: Condition | undefined): ShowIf | undefined => {
+    if (!condition) return undefined
+    return {
+      field: condition.field,
+      ...(condition.equals !== undefined ? { equals: condition.equals } : { notEquals: condition.notEquals }),
+    }
+  }
+
+  const patchGroup = (key: "all" | "any", next: Condition[]) => {
+    if (next.length === 0) {
+      onChange({ showIf: asSingle(singleOf(showIf)) })
+      return
+    }
+    const single = singleOf(showIf)
+    onChange({
+      showIf: {
+        ...(single ? { field: single.field, ...(single.equals !== undefined ? { equals: single.equals } : { notEquals: single.notEquals }) } : {}),
+        [key]: next,
+      },
+    })
+  }
+
+  const group = mode === "all" ? (showIf?.all ?? []) : (showIf?.any ?? [])
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label className="text-xs text-muted-foreground">Show only if</Label>
+      <Select value={mode} onValueChange={(v) => setMode(v as ConditionMode)}>
+        <SelectTrigger className="h-8">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="always">(always visible)</SelectItem>
+          <SelectItem value="single">Single condition</SelectItem>
+          <SelectItem value="all">All of these (AND)</SelectItem>
+          <SelectItem value="any">Any of these (OR)</SelectItem>
+        </SelectContent>
+      </Select>
+
+      {mode === "single" && (
+        <ConditionRow
+          condition={singleOf(showIf) ?? { field: blankField, equals: "" }}
+          selfName={field.name}
+          knownNames={knownNames}
+          otherFields={otherFields}
+          canRemove={false}
+          onRemove={() => {}}
+          onPatch={(next) => onChange({ showIf: { field: next.field, ...(next.equals !== undefined ? { equals: next.equals } : { notEquals: next.notEquals }) } })}
+        />
+      )}
+
+      {(mode === "all" || mode === "any") && (
+        <div className="flex flex-col gap-1.5">
+          {group.map((condition, i) => (
+            <ConditionRow
+              key={i}
+              condition={condition}
+              selfName={field.name}
+              knownNames={knownNames}
+              otherFields={otherFields}
+              canRemove={group.length > 1}
+              onRemove={() => patchGroup(mode, group.filter((_, j) => j !== i))}
+              onPatch={(next) => patchGroup(mode, group.map((c, j) => (j === i ? next : c)))}
+            />
+          ))}
+          <Button
+            variant="outline"
+            size="sm"
+            className="self-start"
+            disabled={blankField === "" && group.length > 0}
+            onClick={() => patchGroup(mode, [...group, { field: blankField, equals: "" }])}
+          >
+            + Add condition
+          </Button>
+        </div>
+      )}
+
+      {summary && <p className="font-mono text-[11px] text-muted-foreground">Visible when: {summary}</p>}
     </div>
   )
 }

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react"
 import type { Field, KiTheme } from "../../src/types"
 import { KiForm } from "../../src/renderer/KiForm"
-import { toJson, toReactSnippet } from "../lib/export"
-import { validateSchema } from "../lib/schema"
+import { toJson, toReactSnippet, toRoundTripSnippet, importSchemaBlock } from "../lib/export"
+import { parseDocumentImport, type DocumentImport } from "../lib/schema"
 import { TEMPLATES } from "../lib/templates"
 import { appsScript, diagnoseNoCors } from "../lib/sheets"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
@@ -22,7 +22,7 @@ function useEscape(onClose: () => void) {
   }, [onClose])
 }
 
-function CopyButton({ getText }: { getText: () => string }) {
+function CopyButton({ getText, label = "copy" }: { getText: () => string; label?: string }) {
   const [copied, setCopied] = useState(false)
   return (
     <Button
@@ -38,7 +38,7 @@ function CopyButton({ getText }: { getText: () => string }) {
           .catch(() => {})
       }
     >
-      {copied ? <Check /> : <Copy />} {copied ? "copied!" : "copy"}
+      {copied ? <Check /> : <Copy />} {copied ? "copied!" : label}
     </Button>
   )
 }
@@ -138,25 +138,30 @@ export type CodeModalProps = {
   theme: KiTheme
   variant: "classic" | "conversational"
   endpoint?: string
-  onApplyJson: (fields: Field[]) => void
+  onApplyDocument: (doc: DocumentImport) => void
   onClose: () => void
 }
 
-export function CodeModal({ fields, theme, variant, endpoint, onApplyJson, onClose }: CodeModalProps) {
+export function CodeModal({ fields, theme, variant, endpoint, onApplyDocument, onClose }: CodeModalProps) {
   useEscape(onClose)
-  const [tab, setTab] = useState<"json" | "react">("json")
+  const [tab, setTab] = useState<"json" | "react" | "code">("json")
   const [text, setText] = useState(() => toJson(fields))
   const [error, setError] = useState<string | null>(null)
+  const [withZod, setWithZod] = useState(false)
+  const [codeText, setCodeText] = useState("")
+  const [codeError, setCodeError] = useState<string | null>(null)
+  const [codeApplied, setCodeApplied] = useState<string | null>(null)
 
   const apply = () => {
     try {
       const parsed: unknown = JSON.parse(text)
-      const result = validateSchema(parsed)
+      const result = parseDocumentImport(parsed)
       if (result.ok) {
-        onApplyJson(result.fields)
+        onApplyDocument(result.doc)
         setError(null)
         onClose()
       } else {
+        // Invalid input never replaces the current document.
         setError(result.error)
       }
     } catch (err) {
@@ -164,7 +169,39 @@ export function CodeModal({ fields, theme, variant, endpoint, onApplyJson, onClo
     }
   }
 
-  const snippet = toReactSnippet("MyForm", fields, { theme, variant, endpoint })
+  const applyCode = () => {
+    const doc = importSchemaBlock(codeText)
+    if (!doc) {
+      setCodeError("No ki-forms schema block found. Paste code exported with the schema marker.")
+      setCodeApplied(null)
+      return
+    }
+    const result = parseDocumentImport(doc)
+    if (!result.ok) {
+      setCodeError(result.error)
+      setCodeApplied(null)
+      return
+    }
+    onApplyDocument(result.doc)
+    setCodeError(null)
+    setCodeApplied(`${result.doc.fields.length} fields imported from code`)
+    onClose()
+  }
+
+  const snippet = toReactSnippet("MyForm", fields, {
+    theme,
+    variant,
+    endpoint,
+    language: "tsx",
+    validation: withZod ? "zod" : "none",
+  })
+  const roundTrip = toRoundTripSnippet("MyForm", fields, {
+    theme,
+    variant,
+    endpoint,
+    language: "tsx",
+    validation: withZod ? "zod" : "none",
+  })
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -178,13 +215,18 @@ export function CodeModal({ fields, theme, variant, endpoint, onApplyJson, onClo
                   Apply changes
                 </Button>
               )}
-              <CopyButton getText={() => (tab === "json" ? text : snippet)} />
+              {tab === "code" && (
+                <Button size="sm" onClick={applyCode}>
+                  Import from code
+                </Button>
+              )}
+              {tab !== "code" && <CopyButton getText={() => (tab === "json" ? text : snippet)} />}
             </div>
           </div>
           <DialogDescription className="sr-only">Copy or edit the form schema and React code</DialogDescription>
         </DialogHeader>
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as "json" | "react")} className="flex min-h-0 min-w-0 flex-1 flex-col gap-0">
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "json" | "react" | "code")} className="flex min-h-0 min-w-0 flex-1 flex-col gap-0">
           <div className="border-b p-2">
             <TabsList>
               <TabsTrigger value="json">
@@ -192,6 +234,9 @@ export function CodeModal({ fields, theme, variant, endpoint, onApplyJson, onClo
               </TabsTrigger>
               <TabsTrigger value="react">
                 <FileCode2 /> React component
+              </TabsTrigger>
+              <TabsTrigger value="code">
+                <FileCode2 /> Import code
               </TabsTrigger>
             </TabsList>
           </div>
@@ -209,12 +254,47 @@ export function CodeModal({ fields, theme, variant, endpoint, onApplyJson, onClo
                 ✕ {error}
               </div>
             ) : (
-              <div className="text-xs text-muted-foreground">✓ valid schema — press “Apply changes” to sync the canvas</div>
+              <div className="text-xs text-muted-foreground">Accepts a field array or a full document (fields + theme, variant, endpoint) — “Apply changes” syncs the canvas</div>
             )}
           </TabsContent>
 
-          <TabsContent value="react" className="min-h-0 min-w-0 flex-1 overflow-auto p-4">
-            <pre className="min-w-0 max-w-full overflow-x-auto rounded-md border bg-muted/30 p-3 font-mono text-xs leading-relaxed">{snippet}</pre>
+          <TabsContent value="react" className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={withZod}
+                  onChange={(e) => setWithZod(e.target.checked)}
+                  className="size-3.5 accent-[var(--studio-accent)]"
+                />
+                Include Zod validation (your own zod instance)
+              </label>
+              <CopyButton getText={() => roundTrip} label="copy importable" />
+            </div>
+            <pre className="min-h-0 min-w-0 max-w-full flex-1 overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-xs leading-relaxed">{snippet}</pre>
+            <p className="text-[11px] text-muted-foreground">“Copy importable” adds a hidden schema block so the component can be pasted back under Import code.</p>
+          </TabsContent>
+
+          <TabsContent value="code" className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-4">
+            <textarea
+              className="min-h-[240px] min-w-0 w-full max-w-full flex-1 resize-none overflow-auto rounded-md border border-input bg-card p-3 font-mono text-xs leading-relaxed text-foreground outline-none focus-visible:border-studio-accent focus-visible:ring-studio-accent/30 focus-visible:ring-[3px]"
+              spellCheck={false}
+              wrap="off"
+              placeholder="Paste a component copied with “copy importable”…"
+              value={codeText}
+              onChange={(e) => { setCodeText(e.target.value); setCodeError(null); setCodeApplied(null) }}
+            />
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={applyCode}>
+                Import from code
+              </Button>
+              {codeApplied && <span className="text-xs text-emerald-600">✓ {codeApplied}</span>}
+            </div>
+            {codeError && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                ✕ {codeError}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </DialogContent>

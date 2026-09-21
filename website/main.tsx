@@ -110,6 +110,7 @@ function renderPage(route: string) {
           <LiveDemo fields={EXAMPLE_CONDITIONAL} />
           <h2>Groups</h2>
           <p>Use <code>all</code> when every condition must match, or <code>any</code> when one match is enough. A top-level condition combines with groups via AND.</p>
+          <p>In Schema Studio, select a field and choose “All of these (AND)” or “Any of these (OR)” under “Show only if” — conditions can be added, edited, and removed visually, with a readable summary and warnings for unknown fields.</p>
           <LiveDemo fields={EXAMPLE_GROUP} />
           <Callout title="Deprecated compatibility">The legacy <code>requiredWhen</code> option is retained only for compatibility. New schemas use <code>showIf</code> plus <code>required</code>.</Callout>
         </PageShell>
@@ -128,6 +129,7 @@ function renderPage(route: string) {
           <p>Use your own Zod instance with the optional adapter. Conditional requiredness comes from <code>showIf</code> plus <code>required: true</code>.</p>
           <CodeBlock code={CODE_ZOD} />
           <p>Use code-first Zod for complex refinements and maximum type inference.</p>
+          <p>Studio can also generate the schema for you: open Code → React component → check “Include Zod validation”. The generated component carries a readable <code>z.object</code> schema with conditional rules derived from <code>showIf</code>, plus a <code>z.infer</code> type for the submit handler.</p>
           <LiveDemo fields={EXAMPLE_CONDITIONAL} />
         </PageShell>
       )
@@ -136,8 +138,9 @@ function renderPage(route: string) {
         <PageShell eyebrow="Visual authoring" title="Schema Studio">
           <ol>
             <li>Design the form visually.</li>
-            <li>Open Code and review the generated output.</li>
+            <li>Open Code and review the generated output — optionally with Zod validation.</li>
             <li>Copy the component into your application.</li>
+            <li>Paste JSON, a full document, or previously exported component code back under Schema JSON / Import code to keep iterating.</li>
           </ol>
           <a className="text-link" href="./studio/">Open Schema Studio →</a>
         </PageShell>
@@ -146,6 +149,7 @@ function renderPage(route: string) {
       return (
         <PageShell eyebrow="Own the code" title="React export">
           <p>Generated output includes the fields, styles import, variant, theme, endpoint, and serializable field properties.</p>
+          <p>Check “Include Zod validation” for a readable <code>z.object</code> schema plus a <code>z.infer</code> submit type. “Copy importable” adds a hidden schema block so the component can be pasted back into Studio under Import code.</p>
           <p>Arbitrary callbacks such as <code>onChange</code> are application code, not portable JSON. The exporter reports them as warnings instead of silently discarding behavior.</p>
           <CodeBlock code={CODE_QUICKSTART} />
         </PageShell>
