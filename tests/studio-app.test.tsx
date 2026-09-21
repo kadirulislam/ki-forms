@@ -40,6 +40,22 @@ describe("studio app (shadcn rebuild)", () => {
     expect(panelButton("Form")).toBeTruthy()
   })
 
+  it("opens the in-app documentation guide and switches sections", async () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole("button", { name: "Docs" }))
+
+    expect(screen.getByRole("dialog")).toBeTruthy()
+    expect(screen.getByText(/Choose a template, edit fields/i)).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Conditions" }))
+    expect(screen.getByText(/Use showIf with field/i)).toBeTruthy()
+    expect(screen.getByRole("link", { name: /Full documentation/i }).getAttribute("href")).toBe(
+      "https://github.com/kadirulislam/ki-forms#readme",
+    )
+
+    fireEvent.keyDown(document, { key: "Escape" })
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+  })
+
   it("appends a field from the Blocks panel and selects it", async () => {
     render(<App />)
     openDrawer()

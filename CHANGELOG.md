@@ -11,6 +11,8 @@ All notable changes to ki-forms are documented here.
 - Schema Studio React exports now include the `ki-forms/styles.css` import.
 - Schema Studio JSON and React export tabs now stay within the viewport on narrow screens.
 - Copying from the Schema JSON tab now uses the current editor contents.
+- Added an in-app Schema Studio guide with quick start, fields, conditions, themes, responses, styling, and export sections.
+- Added Docs actions to the desktop toolbar and mobile overflow menu.
 
 ### Planned
 

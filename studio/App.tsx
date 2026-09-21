@@ -18,7 +18,7 @@ import { BlocksPanel } from "./components/BlocksPanel"
 import { StylePanel } from "./components/StylePanel"
 import { FormPanel } from "./components/FormPanel"
 import { Inspector } from "./components/Inspector"
-import { TemplatesModal, CodeModal, PreviewOverlay, SheetsModal } from "./components/Modals"
+import { TemplatesModal, DocsModal, CodeModal, PreviewOverlay, SheetsModal } from "./components/Modals"
 import { validateSchema } from "./lib/schema"
 import { toReactSnippet } from "./lib/export"
 import { TEMPLATES } from "./lib/templates"
@@ -59,6 +59,7 @@ import {
   Check,
   ChevronLeft,
   Move,
+  BookOpen,
 } from "lucide-react"
 
 type Variant = "classic" | "conversational"
@@ -135,7 +136,7 @@ export default function App() {
     }
   })
   const [device, setDevice] = useState<DeviceMode>("desktop")
-  const [modal, setModal] = useState<"none" | "templates" | "code" | "preview" | "sheets">("none")
+  const [modal, setModal] = useState<"none" | "templates" | "docs" | "code" | "preview" | "sheets">("none")
   const [dark, setDark] = useState<boolean>(() => {
     try {
       return localStorage.getItem("ki-studio-dark") === "1"
@@ -676,6 +677,15 @@ export default function App() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setModal("docs")}
+              className="h-8.5 rounded-lg text-xs font-semibold gap-1.5 hidden md:inline-flex border-border bg-card text-foreground hover:bg-accent hover:text-foreground"
+            >
+              <BookOpen className="size-3.5" /> Docs
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setModal("preview")}
               className="h-8.5 rounded-lg text-xs font-semibold gap-1.5 hidden md:inline-flex border-border bg-card text-foreground hover:bg-accent hover:text-foreground"
             >
@@ -724,6 +734,9 @@ export default function App() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setModal("code")}>
                   <Code2 className="mr-2 size-4" /> Code…
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setModal("docs")}>
+                  <BookOpen className="mr-2 size-4" /> Docs…
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setModal("preview")}>
                   <Eye className="mr-2 size-4" /> Preview…
@@ -1054,6 +1067,7 @@ export default function App() {
 
         {/* Modals & Overlays */}
         {modal === "templates" && <TemplatesModal onPick={applyTemplate} onClose={() => setModal("none")} />}
+        {modal === "docs" && <DocsModal onClose={() => setModal("none")} />}
         {modal === "code" && (
           <CodeModal
             fields={doc.fields}

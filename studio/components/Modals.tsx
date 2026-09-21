@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
 import { cn } from "../lib/utils"
-import { Check, Copy, FileJson, FileCode2 } from "lucide-react"
+import { Check, Copy, FileJson, FileCode2, BookOpen, ExternalLink } from "lucide-react"
 
 function useEscape(onClose: () => void) {
   useEffect(() => {
@@ -74,6 +74,59 @@ export function TemplatesModal({ onPick, onClose }: TemplatesModalProps) {
               <span className="text-xs text-muted-foreground">{t.description}</span>
             </button>
           ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export type DocsModalProps = { onClose: () => void }
+
+const DOCS_SECTIONS = [
+  ["quick-start", "Quick start", "Choose a template, edit fields, customize Style/Form panels, preview device widths, then use Code to export."],
+  ["fields", "Fields", "Available blocks: text, email, password, number, tel, url, date, textarea, select, and checkbox. Every field name becomes a submitted value key."],
+  ["conditions", "Conditions", "Use showIf with field plus equals or notEquals. Use all when every condition must match, or any when one match is enough. Hidden fields skip validation."],
+  ["themes", "Themes", "Theme tokens become --ki-* CSS variables. React exports include import \"ki-forms/styles.css\" so the built-in styles are available."],
+  ["responses", "Responses", "Add an endpoint in the Form panel to POST { values, meta }. Google Sheets setup generates an Apps Script web app, and JSON webhooks are supported."],
+  ["styling", "Styling", "Use field className for field-specific CSS in your application. Theme tokens handle common form styling; custom CSS stays owned by your app."],
+  ["export", "Export", "Schema JSON is portable and editable. React component is ready to paste. Both editors scroll independently on narrow screens."],
+] as const
+
+export function DocsModal({ onClose }: DocsModalProps) {
+  useEscape(onClose)
+  const [section, setSection] = useState("quick-start")
+  const current = DOCS_SECTIONS.find(([id]) => id === section) ?? DOCS_SECTIONS[0]
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="flex max-h-[calc(100dvh-2rem)] min-w-0 w-full max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-h-[85vh] sm:max-w-3xl">
+        <DialogHeader className="border-b p-4">
+          <DialogTitle className="flex items-center gap-2 text-base"><BookOpen className="size-4 text-studio-accent" /> Schema Studio guide</DialogTitle>
+          <DialogDescription>Learn the schema, preview, and export workflow without leaving Studio.</DialogDescription>
+        </DialogHeader>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col sm:flex-row">
+          <nav aria-label="Documentation sections" className="flex shrink-0 gap-1 overflow-x-auto border-b p-2 sm:w-40 sm:flex-col sm:border-b-0 sm:border-r sm:p-3">
+            {DOCS_SECTIONS.map(([id, label]) => <button key={id} type="button" className={cn("shrink-0 rounded-md px-2.5 py-1.5 text-left text-xs font-medium hover:bg-accent", section === id && "bg-accent text-foreground")} onClick={() => setSection(id)}>{label}</button>)}
+          </nav>
+          <article className="min-h-0 min-w-0 flex-1 overflow-y-auto p-4 text-sm leading-relaxed sm:p-6">
+            <h2 className="mb-3 text-lg font-semibold">{current[1]}</h2>
+            <p className="text-muted-foreground">{current[2]}</p>
+            {section === "conditions" && <pre className="mt-4 overflow-x-auto rounded-md border bg-muted/40 p-3 font-mono text-xs">{`showIf: { field: "plan", equals: "Pro" }
+
+showIf: { all: [
+  { field: "country", equals: "US" },
+  { field: "plan", equals: "Pro" }
+] }`}</pre>}
+            {section === "themes" && <pre className="mt-4 overflow-x-auto rounded-md border bg-muted/40 p-3 font-mono text-xs">{`theme={{
+  accentColor: "#ea580c",
+  radius: "0.625rem",
+  fontFamily: "system-ui, sans-serif",
+}}`}</pre>}
+            {section === "styling" && <pre className="mt-4 overflow-x-auto rounded-md border bg-muted/40 p-3 font-mono text-xs">{`{ name: "rating", className: "feedback-rating" }
+
+.feedback-rating { border-color: #ea580c; }`}</pre>}
+            <a className="mt-6 inline-flex items-center gap-1.5 text-xs font-medium text-studio-accent hover:underline" href="https://github.com/kadirulislam/ki-forms#readme" target="_blank" rel="noreferrer">Full documentation <ExternalLink className="size-3" /></a>
+          </article>
         </div>
       </DialogContent>
     </Dialog>

@@ -52,6 +52,7 @@ ki-forms is a native React form renderer for portable JSON schemas. It avoids ho
 - Ready-to-paste React export
 - Valid React export with escaped values, theme syntax, and `ki-forms/styles.css` import
 - Responsive Schema JSON and React export editors with independent scrolling
+- In-app Docs guide available from desktop and mobile Studio navigation
 - Shadcn-inspired presets
 - Responsive inspector and mobile drawer layout
 - Google Sheets collection flow with generated Apps Script
