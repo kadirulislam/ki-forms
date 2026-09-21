@@ -8,21 +8,20 @@ describe("validateSchema", () => {
     expect(validateSchema(null).ok).toBe(false)
   })
 
-  it("accepts 2.0.0 string shorthand", () => {
+  it("accepts string shorthand as field names", () => {
     const r = validateSchema(["email", "password"])
     expect(r.ok).toBe(true)
   })
 
-  it("rejects unknown string shorthand types", () => {
+  it("treats unknown strings as field names (canonical shorthand)", () => {
     const r = validateSchema(["email", "banana"])
-    expect(r.ok).toBe(false)
-    if (!r.ok) expect(r.error).toContain("banana")
+    expect(r.ok).toBe(true)
   })
 
   it("rejects objects without a name", () => {
     const r = validateSchema([{ type: "text" }])
     expect(r.ok).toBe(false)
-    if (!r.ok) expect(r.error).toContain('"name"')
+    if (!r.ok) expect(r.error).toContain("Name is required")
   })
 
   it("rejects duplicate names", () => {
@@ -31,13 +30,13 @@ describe("validateSchema", () => {
       { name: "email", type: "text" },
     ])
     expect(r.ok).toBe(false)
-    if (!r.ok) expect(r.error).toContain("duplicate")
+    if (!r.ok) expect(r.error).toContain("Duplicate field name")
   })
 
   it("rejects unknown object types", () => {
     const r = validateSchema([{ name: "x", type: "banana" }])
     expect(r.ok).toBe(false)
-    if (!r.ok) expect(r.error).toContain("unknown type")
+    if (!r.ok) expect(r.error).toContain("Unknown field type")
   })
 
   it("rejects invalid label / placeholder / required / helperText", () => {
@@ -71,9 +70,12 @@ describe("validateSchema", () => {
     expect(
       validateSchema([{ name: "x", showIf: { all: [{ field: "y" }] } }]).ok,
     ).toBe(false)
+  })
+
+  it("allows single conditions combined with groups via AND", () => {
     expect(
       validateSchema([{ name: "x", showIf: { field: "y", equals: 1, all: [{ field: "z", equals: 2 }] } }]).ok,
-    ).toBe(false)
+    ).toBe(true)
   })
 
   it("accepts single, all and any showIf shapes", () => {
