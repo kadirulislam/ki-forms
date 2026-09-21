@@ -39,6 +39,7 @@ describe("toReactSnippet", () => {
 
   it("imports the real library API", () => {
     expect(snippet).toContain('import { KiForm } from "ki-forms"')
+    expect(snippet).toContain('import "ki-forms/styles.css"')
   })
 
   it("uses the given component name", () => {
@@ -92,5 +93,33 @@ describe("toReactSnippet", () => {
     expect(themed).toContain("theme={{")
     expect(themed).toContain('accentColor: "#8b5cf6"')
     expect(themed).toContain('radius: "12px"')
+  })
+
+  it("emits valid theme syntax and escapes quoted values", () => {
+    const themed = toReactSnippet("MyForm", [{ name: "email", type: "email" }], {
+      theme: {
+        accentColor: "#ea580c",
+        fontFamily: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+      },
+    })
+
+    expect(themed).toContain('accentColor: "#ea580c",\n')
+    expect(themed).toContain('fontFamily: "ui-sans-serif, system-ui, -apple-system, \\"Segoe UI\\", Roboto, sans-serif",')
+    expect(themed).not.toContain('accentColor: "#ea580c"\n')
+  })
+
+  it("escapes strings in generated field configuration", () => {
+    const escaped = toReactSnippet("MyForm", [{
+      name: 'customer"Name',
+      type: "text",
+      label: "Say \"hello\"",
+      placeholder: "Line one\nLine two",
+      helperText: "Use \\ carefully",
+    }])
+
+    expect(escaped).toContain('name: "customer\\"Name"')
+    expect(escaped).toContain('label: "Say \\"hello\\""')
+    expect(escaped).toContain('placeholder: "Line one\\nLine two"')
+    expect(escaped).toContain('helperText: "Use \\\\ carefully"')
   })
 })

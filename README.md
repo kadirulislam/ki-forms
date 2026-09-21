@@ -219,6 +219,38 @@ const form = useKiForm({
 - Extendable component system  
 - Built-in UI  
 
+### Supported field types
+
+`text`, `email`, `password`, `number`, `tel`, `url`, `date`, `textarea`, `select`, and `checkbox`.
+
+### Custom field components
+
+Replace or extend built-in renderers with the `components` prop. A custom component receives the field definition, current value, validation error, and an `onChange` callback:
+
+```jsx
+function RatingField({ field, value, onChange, error }) {
+  return (
+    <div>
+      <input
+        type="range"
+        min="1"
+        max="5"
+        value={value ?? 1}
+        onChange={(event) => onChange(Number(event.target.value))}
+      />
+      {error && <p>{error}</p>}
+    </div>
+  )
+}
+
+<KiForm
+  fields={[{ name: "rating", type: "text" }]}
+  components={{ text: RatingField }}
+/>
+```
+
+For the complete public API, see the exported TypeScript types: `Field`, `KiFormProps`, `FormApi`, `KiTheme`, and `SubmitEndpointResult`.
+
 ---
 
 ## 🎨 Theming (new in 2.1)

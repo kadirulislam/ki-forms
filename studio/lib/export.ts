@@ -1,5 +1,9 @@
 import type { Field } from "../../src/types"
 
+function stringLiteral(value: unknown): string {
+  return JSON.stringify(String(value))
+}
+
 /** Pretty-printed, copy-ready form schema JSON. */
 export function toJson(fields: Field[]): string {
   return JSON.stringify(fields, null, 2)
@@ -7,17 +11,17 @@ export function toJson(fields: Field[]): string {
 
 function optionsLiteral(options: NonNullable<Field["options"]>): string {
   if (options.every((o) => typeof o === "string")) {
-    return `["${(options as string[]).join('", "')}"]`
+    return `[${(options as string[]).map(stringLiteral).join(", ")}]`
   }
   const rows = (options as { label: string; value: string }[])
-    .map((o) => `    { label: "${o.label}", value: "${o.value}" }`)
+    .map((o) => `    { label: ${stringLiteral(o.label)}, value: ${stringLiteral(o.value)} }`)
   return `[\n${rows.join(",\n")},\n  ]`
 }
 
 function showIfLiteral(field: Field): string {
   const si = field.showIf as Record<string, unknown>
   const cond = (c: { field: string; equals?: unknown; notEquals?: unknown }) =>
-    `{ field: "${c.field}", ${c.equals !== undefined ? `equals: ${JSON.stringify(c.equals)}` : `notEquals: ${JSON.stringify(c.notEquals)}`} }`
+    `{ field: ${stringLiteral(c.field)}, ${c.equals !== undefined ? `equals: ${JSON.stringify(c.equals)}` : `notEquals: ${JSON.stringify(c.notEquals)}`} }`
 
   if (Array.isArray(si.all)) {
     const parts = si.all.map((c) => cond(c as { field: string })).join(", ")
@@ -52,10 +56,10 @@ export type SnippetOptions = {
 
 function themeLiteral(theme: Record<string, string>): string {
   const rows = Object.entries(theme)
-    .map(([k, v]) => `        ${k}: "${v}"`)
+    .map(([k, v]) => `        ${k}: ${stringLiteral(v)},`)
     .join("\n")
   return `theme={{
-${rows},
+${rows}
       }}`
 }
 
@@ -63,7 +67,7 @@ ${rows},
 export function toReactSnippet(componentName: string, fields: Field[], options?: SnippetOptions): string {
   const lines = fields
     .map((f) => {
-      if (typeof f === "string") return `  "${f}",`
+      if (typeof f === "string") return `  ${stringLiteral(f)},`
 
       // String shorthand is only safe for a bare text field: the renderer maps
       // it to a text input, and nothing else needs to be said about it.
@@ -75,18 +79,18 @@ export function toReactSnippet(componentName: string, fields: Field[], options?:
         !f.helperText &&
         !f.showIf &&
         (f.label === undefined || f.label === f.name)
-      if (isBareText) return `  "${f.name}",`
+      if (isBareText) return `  ${stringLiteral(f.name)},`
 
-      const parts: string[] = [`name: "${f.name}"`]
-      if (f.type) parts.push(`type: "${f.type}"`)
+      const parts: string[] = [`name: ${stringLiteral(f.name)}`]
+      if (f.type) parts.push(`type: ${stringLiteral(f.type)}`)
       if (f.label !== undefined) {
         if (f.label === false) parts.push(`label: false`)
-        else if (f.label !== f.name) parts.push(`label: "${f.label}"`)
+        else if (f.label !== f.name) parts.push(`label: ${stringLiteral(f.label)}`)
       }
-      if (f.placeholder) parts.push(`placeholder: "${f.placeholder}"`)
+      if (f.placeholder) parts.push(`placeholder: ${stringLiteral(f.placeholder)}`)
       if (f.options) parts.push(`options: ${optionsLiteral(f.options)}`)
       if (f.required) parts.push(`required: true`)
-      if (f.helperText) parts.push(`helperText: "${f.helperText}"`)
+      if (f.helperText) parts.push(`helperText: ${stringLiteral(f.helperText)}`)
       if (f.showIf) parts.push(showIfLiteral(f))
       return `  { ${parts.join(", ")} },`
     })
@@ -103,6 +107,7 @@ export function toReactSnippet(componentName: string, fields: Field[], options?:
       }}`
 
   return `import { KiForm } from "ki-forms"
+import "ki-forms/styles.css"
 
 export default function ${componentName}() {
   return (
