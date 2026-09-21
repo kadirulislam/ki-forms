@@ -61,6 +61,8 @@ export type SnippetOptions = {
   endpoint?: string
   onSubmitBody?: string
   language?: "tsx" | "jsx"
+  /** Emit a readable Zod schema alongside the component (code-first friendly). */
+  validation?: "none" | "zod"
 }
 
 export type ExportWarning = { field: string; message: string }
@@ -70,12 +72,101 @@ function themeLiteral(theme: Record<string, string>): string {
   return `theme={{\n${Object.entries(theme).map(([key, value]) => `        ${key}: ${literal(value)},`).join("\n")}\n      }}`
 }
 
+function isValidIdentifier(name: string): boolean {
+  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name)
+}
+
+function valueAccess(name: string): string {
+  return isValidIdentifier(name) ? `values.${name}` : `values[${literal(name)}]`
+}
+
+function conditionSource(showIf: NonNullable<Field["showIf"]>): string {
+  const parts: string[] = []
+  if (showIf.field) {
+    const access = valueAccess(showIf.field)
+    if (showIf.equals !== undefined) parts.push(`${access} === ${literal(showIf.equals)}`)
+    else if (showIf.notEquals !== undefined) parts.push(`${access} !== ${literal(showIf.notEquals)}`)
+  }
+  const group = (conditions: { field: string; equals?: unknown; notEquals?: unknown }[], joiner: string) => {
+    const inner = conditions.map((c) => {
+      const access = valueAccess(c.field)
+      if (c.equals !== undefined) return `${access} === ${literal(c.equals)}`
+      return `${access} !== ${literal(c.notEquals)}`
+    })
+    const joined = inner.join(` ${joiner} `)
+    return inner.length > 1 ? `(${joined})` : joined
+  }
+  if (showIf.all) parts.push(group(showIf.all, "&&"))
+  if (showIf.any) parts.push(group(showIf.any, "||"))
+  const joined = parts.join(" && ")
+  return parts.length > 1 ? `(${joined})` : joined
+}
+
+function emptyCheckSource(field: Field): string {
+  const access = valueAccess(field.name)
+  if (field.type === "checkbox") return `${access} !== true`
+  if (field.type === "number") return `${access} === "" || ${access} == null || Number.isNaN(${access})`
+  return `${access} == null || String(${access}).trim() === ""`
+}
+
+function labelOf(field: Field): string {
+  return typeof field.label === "string" ? field.label : field.name
+}
+
+/**
+ * Generate a readable `z.object(...)` source expression from fields.
+ * Conditional requiredness comes from `showIf` + `required` — the same
+ * source of truth as the runtime and `buildZodSchema`.
+ */
+export function buildZodSource(fields: Field[]): string {
+  // String shorthand is a field name with default text semantics — never dropped.
+  const normalized: Exclude<Field, string>[] = fields.map((f) => (typeof f === "string" ? { name: f } : f))
+  const shape = normalized
+    .map((field) => {
+      let base: string
+      if (field.type === "number") base = "z.number()"
+      else if (field.type === "checkbox") base = "z.boolean()"
+      else base = "z.string()"
+      if (field.type === "email") base += `.email("Enter a valid email")`
+      if (field.required && !field.showIf) {
+        if (field.type === "checkbox") base += `.refine((v) => v === true, { message: ${literal(`${labelOf(field)} must be checked`)} })`
+        else if (field.type === "number") base += `.refine((v) => typeof v === "number" && !Number.isNaN(v), { message: ${literal(`${labelOf(field)} is required`)} })`
+        else base += `.min(1, ${literal(`${labelOf(field)} is required`)})`
+      } else {
+        base += ".optional()"
+      }
+      return `  ${field.name}: ${base},`
+    })
+    .join("\n")
+
+  const conditional = normalized.filter((f) => !!f.required && !!f.showIf)
+  const refinements = conditional
+    .map((field) => {
+      const cond = conditionSource(field.showIf as NonNullable<Field["showIf"]>)
+      const empty = emptyCheckSource(field)
+      const message = literal(`${labelOf(field)} is required`)
+      const path = literal(field.name)
+      return `  if (${cond}) {\n    if (${empty}) {\n      ctx.addIssue({ code: "custom", message: ${message}, path: [${path}] });\n    }\n  }`
+    })
+    .join("\n")
+
+  const object = `z.object({\n${shape}\n})`
+  if (!refinements) return object
+  return `${object}.superRefine((values, ctx) => {\n${refinements}\n})`
+}
+
 export function exportReact(componentName: string, fields: Field[], options?: SnippetOptions): ExportResult {
   const warnings: ExportWarning[] = []
   const lines = fields.map((field) => fieldLiteral(field, warnings)).join("\n")
   const isTsx = options?.language === "tsx"
-  const typedImport = isTsx ? `\nimport type { InferFormValues } from "ki-forms"` : ""
-  const typedDeclaration = isTsx ? "\ntype FormValues = InferFormValues<typeof fields>" : ""
+  const withZod = options?.validation === "zod"
+  const zodImport = withZod ? `\nimport { z } from "zod"` : ""
+  const typedImport = isTsx && !withZod ? `\nimport type { InferFormValues } from "ki-forms"` : ""
+  const schemaDecl = withZod ? `\n\nconst schema = ${buildZodSource(fields)}` : ""
+  const typedDeclaration = withZod
+    ? isTsx ? "\n\ntype FormValues = z.infer<typeof schema>" : ""
+    : isTsx ? "\ntype FormValues = InferFormValues<typeof fields>" : ""
+  const schemaProp = withZod ? `\n      schema={schema}` : ""
   const variant = options?.variant === "conversational" ? `\n      variant="conversational"` : ""
   const theme = options?.theme && Object.keys(options.theme).length > 0 ? `\n      ${themeLiteral(options.theme)}` : ""
   const endpoint = options?.endpoint ? `\n      endpoint=${literal(options.endpoint)}` : ""
@@ -85,17 +176,17 @@ export function exportReact(componentName: string, fields: Field[], options?: Sn
     : `\n      onSubmit={(values${isTsx ? ": FormValues" : ""}) => {\n        ${submitBody}\n      }}`
 
   const code = [
-    `import { KiForm } from "ki-forms"${typedImport}`,
+    `import { KiForm } from "ki-forms"${typedImport}${zodImport}`,
     `import "ki-forms/styles.css"`,
     "",
     "const fields = [",
     lines,
-    `] as const${typedDeclaration}`,
+    `] as const${schemaDecl}${typedDeclaration}`,
     "",
     `export default function ${componentName}() {`,
     "  return (",
     `    <KiForm${variant}${endpoint}`,
-    `      fields={fields}${theme}${submit}`,
+    `      fields={fields}${schemaProp}${theme}${submit}`,
     "    />",
     "  )",
     "}",
