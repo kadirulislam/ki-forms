@@ -99,6 +99,10 @@ export type FormApi = {
   handleSubmit: (e?: FormEvent) => void
   /** Validate a single visible field (added in 2.1.0 — additions keep the 2.0.0 keys intact) */
   validateField: (name: string) => boolean
+  /** Validate all visible fields without submitting (added in 2.2.0 — additive) */
+  validate: () => boolean
+  /** Internal: validate + fire onSubmit, returning whether it passed (2.2.0). */
+  handleSubmitChecked: (e?: FormEvent) => boolean
 }
 
 export type UseKiFormOptions = {
@@ -107,9 +111,33 @@ export type UseKiFormOptions = {
   schema?: KiFormSchema
 }
 
+/**
+ * Lifecycle of a submission sent to `endpoint` (added in 2.2.0).
+ * Forms without `endpoint` stay idle forever (2.0.0 behavior unchanged).
+ */
+export type SubmissionState = "idle" | "submitting" | "success" | "error"
+
+/** Envelope metadata sent alongside values when `endpoint` is set (added in 2.2.0). */
+export type SubmissionMeta = {
+  submittedAt: string
+  pageUrl?: string
+  referrer?: string
+  userAgent?: string
+}
+
+/** Result of an endpoint submission, passed to `onSubmitted` (added in 2.2.0). */
+export type SubmitEndpointResult = {
+  ok: boolean
+  /** Parsed JSON response body when the endpoint replies with JSON. */
+  response?: unknown
+  /** Human-readable error when `ok` is false. */
+  error?: string
+}
+
 export type KiFormProps = {
   fields?: FieldInput[]
-  onSubmit?: (values: FormValues) => void
+  /** Widened in 2.2.0: async handlers are allowed. Called on every valid submit. */
+  onSubmit?: (values: FormValues) => void | Promise<unknown>
   schema?: KiFormSchema
   className?: string
   components?: KiFormComponents
@@ -120,4 +148,28 @@ export type KiFormProps = {
   variant?: "classic" | "conversational"
   /** Button labels for the conversational variant (added in 2.1.0). */
   stepLabels?: { next?: string; previous?: string; submit?: string }
+
+  // ---------- Collect responses (added in 2.2.0 — all optional) ----------
+  /**
+   * POST target for submissions: every valid submit sends
+   * `{ values, meta }` as JSON. Works with Formspree, Web3Forms, Basin,
+   * Discord/automation webhooks, or a Google Apps Script Web App.
+   */
+  endpoint?: string
+  /** HTTP method for `endpoint`. Default: "POST". */
+  method?: "POST" | "PUT"
+  /** Extra request headers for `endpoint` calls. */
+  headers?: Record<string, string>
+  /** Submit button label. Default: "Submit". */
+  submitLabel?: string
+  /** Status line label while the request is in flight. Default: "Submitting…". */
+  submittingLabel?: string
+  /** Status line label after a successful POST. */
+  successLabel?: string
+  /** Status line label prefix when the POST fails. */
+  errorLabel?: string
+  /** Hide the built-in status line (you render your own from `onSubmitted`). */
+  hideSubmitStatus?: boolean
+  /** Called after the endpoint request settles (success or failure). */
+  onSubmitted?: (result: SubmitEndpointResult) => void
 }

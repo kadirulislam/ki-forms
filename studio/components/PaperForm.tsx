@@ -3,7 +3,7 @@ import type { Field } from "../../src/types"
 import { KiForm } from "../../src/renderer/KiForm"
 import type { KiTheme } from "../../src/types"
 import { cn } from "../lib/utils"
-import { Copy, Trash2 } from "lucide-react"
+import { Copy, Trash2, ArrowUp, ArrowDown, Sparkles } from "lucide-react"
 
 type DropPayload =
   | { kind: "palette"; fieldType: string }
@@ -17,14 +17,28 @@ export type PaperFormProps = {
   onSelect: (index: number) => void
   onDelete: (index: number) => void
   onDuplicate: (index: number) => void
+  onMove?: (index: number, delta: -1 | 1) => void
   onDrop: (payload: DropPayload, at: number) => void
+  onOpenTemplates?: () => void
 }
 
 /**
  * The live form "paper": the real KiForm rendering on a white sheet, wrapped
- * with selection outlines, hover actions, drag-reorder and drop gaps.
+ * with selection outlines, hover actions, drag-reorder, touch fallback
+ * (↑↓ buttons) and drop gaps.
  */
-export function PaperForm({ fields, theme, variant = "classic", selected, onSelect, onDelete, onDuplicate, onDrop }: PaperFormProps) {
+export function PaperForm({
+  fields,
+  theme,
+  variant = "classic",
+  selected,
+  onSelect,
+  onDelete,
+  onDuplicate,
+  onMove,
+  onDrop,
+  onOpenTemplates,
+}: PaperFormProps) {
   const [dropAt, setDropAt] = useState<number | null>(null)
 
   const payloadFromDataTransfer = (dt: DataTransfer): DropPayload | null => {
@@ -63,11 +77,11 @@ export function PaperForm({ fields, theme, variant = "classic", selected, onSele
   )
 
   return (
-    <div className="p-6" onDragLeave={() => setDropAt(null)}>
+    <div className="p-4 sm:p-6" onDragLeave={() => setDropAt(null)}>
       {fields.length === 0 ? (
         <div
           className={cn(
-            "flex min-h-56 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed p-8 text-center transition-colors",
+            "flex min-h-56 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-8 text-center transition-colors",
             dropAt === 0 ? "border-[--studio-accent] bg-[--studio-accent]/5" : "border-border",
           )}
           onDragOver={(e) => {
@@ -76,14 +90,27 @@ export function PaperForm({ fields, theme, variant = "classic", selected, onSele
           }}
           onDrop={acceptDrop(0)}
         >
+          <Sparkles className="size-5 text-[--studio-accent]" />
           <strong className="text-sm font-medium">Drop your first field here</strong>
           <span className="text-xs text-muted-foreground">or click a block on the left to append it</span>
+          {onOpenTemplates && (
+            <button
+              type="button"
+              className="mt-1 inline-flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 text-xs font-medium shadow-xs transition-colors hover:bg-accent"
+              onClick={(e) => {
+                e.stopPropagation()
+                onOpenTemplates()
+              }}
+            >
+              <Sparkles className="size-3.5 text-[--studio-accent]" /> Start from a template
+            </button>
+          )}
         </div>
       ) : (
         <>
           {dropline(0)}
           {fields.map((f, i) => (
-            <div key={`${f.name}-${i}`}>
+            <div key={f.name}>
               <div
                 className={cn(
                   "group relative -mx-2 cursor-grab rounded-lg border border-transparent p-2 transition-colors active:cursor-grabbing",
@@ -112,14 +139,40 @@ export function PaperForm({ fields, theme, variant = "classic", selected, onSele
                   </span>
                 )}
                 <div className="pointer-events-none [&_.ki-form-item]:mb-0">
-                  <KiForm key={fields.map((x) => x.name).join("|")} fields={[f]} theme={theme} variant={variant} />
+                  <KiForm fields={[f]} theme={theme} variant={variant} />
                 </div>
                 <div
                   className={cn(
-                    "absolute -top-2 right-2 z-10 hidden items-center gap-1 group-hover:flex",
+                    "absolute -top-3 right-2 z-10 hidden items-center gap-1 group-hover:flex",
                     selected === i && "flex",
                   )}
                 >
+                  <button
+                    type="button"
+                    title="Move up"
+                    aria-label="Move field up"
+                    disabled={i === 0}
+                    className="flex size-6 cursor-pointer items-center justify-center rounded-md border bg-background text-muted-foreground shadow-xs hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onMove?.(i, -1)
+                    }}
+                  >
+                    <ArrowUp className="size-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    title="Move down"
+                    aria-label="Move field down"
+                    disabled={i === fields.length - 1}
+                    className="flex size-6 cursor-pointer items-center justify-center rounded-md border bg-background text-muted-foreground shadow-xs hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onMove?.(i, 1)
+                    }}
+                  >
+                    <ArrowDown className="size-3.5" />
+                  </button>
                   <button
                     type="button"
                     title="Duplicate"

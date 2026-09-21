@@ -44,6 +44,10 @@ export function fieldSummary(field: Field): string {
 export type SnippetOptions = {
   theme?: Record<string, string>
   variant?: "classic" | "conversational"
+  /** Collect-response endpoint baked into the snippet. */
+  endpoint?: string
+  /** Custom submit handler body; default depends on `endpoint`. */
+  onSubmitBody?: string
 }
 
 function themeLiteral(theme: Record<string, string>): string {
@@ -90,18 +94,22 @@ export function toReactSnippet(componentName: string, fields: Field[], options?:
 
   const variantLine = options?.variant === "conversational" ? '\n      variant="conversational"' : ""
   const themeLine = options?.theme && Object.keys(options.theme).length > 0 ? `\n      ${themeLiteral(options.theme)}` : ""
+  const endpointLine = options?.endpoint ? `\n      endpoint="${options.endpoint}"` : ""
+  const submitBody = options?.onSubmitBody ?? (options?.endpoint ? "// handled by endpoint — responses land in your sheet/service" : "console.log(values)")
+  const submitLine = options?.endpoint && !options?.onSubmitBody
+    ? ""
+    : `\n      onSubmit={(values) => {
+        ${submitBody}
+      }}`
 
   return `import { KiForm } from "ki-forms"
 
 export default function ${componentName}() {
   return (
-    <KiForm${variantLine}
+    <KiForm${variantLine}${endpointLine}
       fields={[
 ${lines}
-      ]}${themeLine}
-      onSubmit={(values) => {
-        console.log(values)
-      }}
+      ]}${themeLine}${submitLine}
     />
   )
 }

@@ -5,15 +5,23 @@ import { BlocksPanel } from "./components/BlocksPanel"
 import { StylePanel } from "./components/StylePanel"
 import { FormPanel } from "./components/FormPanel"
 import { Inspector } from "./components/Inspector"
-import { TemplatesModal, CodeModal, PreviewOverlay } from "./components/Modals"
+import { TemplatesModal, CodeModal, PreviewOverlay, SheetsModal } from "./components/Modals"
 import { validateSchema } from "./lib/schema"
 import { toReactSnippet } from "./lib/export"
 import { TEMPLATES } from "./lib/templates"
 import type { ShadcnPreset } from "./lib/shadcn-presets"
+import { useMinWidth } from "./lib/use-media-query"
 import { Button } from "./components/ui/button"
 import { Separator } from "./components/ui/separator"
 import { Toaster } from "./components/ui/sonner"
 import { Tooltip, TooltipContent, TooltipTrigger } from "./components/ui/tooltip"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "./components/ui/dropdown-menu"
 import { toast } from "sonner"
 import {
   Undo2,
@@ -29,10 +37,15 @@ import {
   Blocks,
   Paintbrush,
   Settings2,
+  MoreHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
+  X,
+  Check,
 } from "lucide-react"
 
 type Variant = "classic" | "conversational"
-type Doc = { title: string; fields: Field[]; theme: KiTheme; variant: Variant; presetId?: string }
+type Doc = { title: string; fields: Field[]; theme: KiTheme; variant: Variant; presetId?: string; endpoint?: string }
 type Panel = "blocks" | "style" | "form"
 
 const STORAGE_KEY = "ki-studio-doc-v2"
@@ -66,6 +79,7 @@ function loadDoc(): Doc {
       theme: p.theme !== null && typeof p.theme === "object" ? (p.theme as KiTheme) : {},
       variant: p.variant === "conversational" ? "conversational" : "classic",
       presetId: typeof p.presetId === "string" ? p.presetId : undefined,
+      endpoint: typeof p.endpoint === "string" && p.endpoint !== "" ? p.endpoint : undefined,
     }
   } catch {
     return fallback()
@@ -80,11 +94,21 @@ export default function App() {
   const [past, setPast] = useState<Doc[]>([])
   const [future, setFuture] = useState<Doc[]>([])
   const lastPushRef = useRef(0)
+  const [saved, setSaved] = useState(false)
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [selected, setSelected] = useState<number | null>(null)
   const [panel, setPanel] = useState<Panel>("blocks")
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [panelOpen, setPanelOpen] = useState(() => {
+    try {
+      return localStorage.getItem("ki-studio-panel") !== "0"
+    } catch {
+      return true
+    }
+  })
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop")
-  const [modal, setModal] = useState<"none" | "templates" | "code" | "preview">("none")
+  const [modal, setModal] = useState<"none" | "templates" | "code" | "preview" | "sheets">("none")
   const [dark, setDark] = useState<boolean>(() => {
     try {
       return localStorage.getItem("ki-studio-dark") === "1"
@@ -94,6 +118,10 @@ export default function App() {
   })
   const [preset, setPreset] = useState<ShadcnPreset | null>(null)
   const [presetDark, setPresetDark] = useState(false)
+
+  const isXl = useMinWidth("xl")
+  const isLg = useMinWidth("lg")
+  const dockInspector = isXl // ≥1280px: inspector is a third column, no overlap
 
   /** Apply the studio accent + preset preview mode on <html> for Tailwind + Radix portals. */
   useEffect(() => {
@@ -157,12 +185,18 @@ export default function App() {
     setSelected(null)
   }, [])
 
-  /** Autosave every committed change. */
+  /** Autosave + transient "Saved" chip. */
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(doc))
     } catch {
       // storage unavailable — studio still works in-memory
+    }
+    setSaved(true)
+    if (savedTimer.current) clearTimeout(savedTimer.current)
+    savedTimer.current = setTimeout(() => setSaved(false), 1600)
+    return () => {
+      if (savedTimer.current) clearTimeout(savedTimer.current)
     }
   }, [doc])
 
@@ -206,6 +240,21 @@ export default function App() {
       if (payload.kind === "palette") addField(payload.fieldType, at)
     },
     [update, addField],
+  )
+
+  const moveField = useCallback(
+    (index: number, delta: -1 | 1) => {
+      update((d) => {
+        const to = index + delta
+        if (to < 0 || to >= d.fields.length) return d
+        const fields = [...d.fields]
+        const [moved] = fields.splice(index, 1)
+        fields.splice(to, 0, moved)
+        return { ...d, fields }
+      })
+      setSelected(index + delta)
+    },
+    [update],
   )
 
   const deleteField = useCallback(
@@ -267,7 +316,7 @@ export default function App() {
 
   const copyReact = useCallback(() => {
     const d = docRef.current
-    const snippet = toReactSnippet("MyForm", d.fields, { theme: d.theme, variant: d.variant })
+    const snippet = toReactSnippet("MyForm", d.fields, { theme: d.theme, variant: d.variant, endpoint: d.endpoint })
     navigator.clipboard
       .writeText(snippet)
       .then(() => toast.success("React code copied — paste it into your app"))
@@ -302,16 +351,60 @@ export default function App() {
   const selectedField = selected !== null ? doc.fields[selected] : undefined
   const otherFields = useMemo(() => doc.fields.filter((_, i) => i !== selected), [doc.fields, selected])
 
-  const onKeydown = useCallback(
-    (e: React.KeyboardEvent) => {
+  /** Global keyboard shortcuts (skipped while typing in inputs/textarea). */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const typing =
+        !!target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
         e.preventDefault()
         if (e.shiftKey) redo()
         else undo()
+        return
       }
-    },
-    [undo, redo],
-  )
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d" && selected !== null) {
+        e.preventDefault()
+        duplicateField(selected)
+        return
+      }
+      if (typing) return
+      if (e.key === "Escape") {
+        setSelected(null)
+        setDrawerOpen(false)
+        return
+      }
+      if (selected !== null && e.key === "Delete") {
+        e.preventDefault()
+        deleteField(selected)
+        return
+      }
+      if (selected !== null && (e.key === "ArrowUp" || e.key === "ArrowDown") && !typing) {
+        e.preventDefault()
+        moveField(selected, e.key === "ArrowUp" ? -1 : 1)
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [undo, redo, selected, duplicateField, deleteField, moveField])
+
+  /** Close the <lg drawer as soon as we have room for the permanent panel. */
+  useEffect(() => {
+    if (isLg) setDrawerOpen(false)
+  }, [isLg])
+
+  /** Persist the lg panel collapse preference. */
+  useEffect(() => {
+    try {
+      localStorage.setItem("ki-studio-panel", panelOpen ? "1" : "0")
+    } catch {
+      // non-fatal
+    }
+  }, [panelOpen])
 
   const railItems: { id: Panel; icon: React.ReactNode; label: string }[] = [
     { id: "blocks", icon: <Blocks />, label: "Blocks" },
@@ -319,24 +412,71 @@ export default function App() {
     { id: "form", icon: <Settings2 />, label: "Form" },
   ]
 
+  const panelBody = (
+    <>
+      {panel === "blocks" && <BlocksPanel onAdd={(t) => addField(t)} />}
+      {panel === "style" && (
+        <StylePanel
+          theme={doc.theme}
+          preset={preset}
+          presetDark={presetDark}
+          onPreset={applyPreset}
+          onPresetMode={togglePresetMode}
+          onTokens={(theme) => update((d) => ({ ...d, theme }), true)}
+          onClearPreset={() => setPreset(null)}
+        />
+      )}
+      {panel === "form" && (
+        <FormPanel
+          formTitle={doc.title}
+          onTitleChange={(title) => update((d) => ({ ...d, title }), true)}
+          variant={doc.variant}
+          onVariantChange={(variant) => update((d) => ({ ...d, variant }))}
+          endpoint={doc.endpoint}
+          onEndpointChange={(endpoint) => update((d) => ({ ...d, endpoint }), true)}
+          onOpenSheets={() => setModal("sheets")}
+        />
+      )}
+    </>
+  )
+
+  const inspectorBody =
+    selectedField !== undefined && selected !== null ? (
+      <Inspector
+        field={selectedField}
+        otherFields={otherFields}
+        onChange={(patch) => patchField(selected, patch)}
+      />
+    ) : null
+
   return (
-    <div className="studio-root flex h-screen flex-col overflow-hidden font-sans antialiased" onKeyDown={onKeydown}>
+    <div className="studio-root flex h-screen flex-col overflow-hidden font-sans antialiased">
       {/* ---------- top bar ---------- */}
-      <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-card px-3">
+      <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-card px-2 sm:px-3">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="flex size-8 items-center justify-center rounded-md bg-[--studio-accent] text-sm font-bold text-white">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-[--studio-accent] text-sm font-bold text-white">
             ki
           </span>
           <input
-            className="w-44 min-w-0 truncate rounded-md bg-transparent px-2 py-1 text-sm font-medium outline-none hover:bg-accent focus:bg-accent"
+            className="w-32 min-w-0 truncate rounded-md bg-transparent px-2 py-1 text-sm font-medium outline-none hover:bg-accent focus:bg-accent sm:w-44"
             value={doc.title}
             placeholder="Untitled form"
             aria-label="Form name"
             onChange={(e) => update((d) => ({ ...d, title: e.target.value }), true)}
           />
+          <span
+            aria-live="polite"
+            className={
+              "hidden items-center gap-1 text-xs text-muted-foreground transition-opacity duration-500 sm:flex " +
+              (saved ? "opacity-100" : "opacity-0")
+            }
+          >
+            <Check className="size-3 text-emerald-500" /> Saved
+          </span>
         </div>
 
-        <div className="mx-auto flex items-center gap-1">
+        {/* center cluster: hidden below lg (undo/redo + device move into the overflow menu) */}
+        <div className="mx-auto hidden items-center gap-1 lg:flex">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="icon-sm" aria-label="Undo (Ctrl+Z)" disabled={past.length === 0} onClick={undo}>
@@ -384,12 +524,7 @@ export default function App() {
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Toggle dark mode"
-                onClick={() => setDark((v) => !v)}
-              >
+              <Button variant="ghost" size="icon-sm" aria-label="Toggle dark mode" onClick={() => setDark((v) => !v)}>
                 {dark ? <Sun /> : <Moon />}
               </Button>
             </TooltipTrigger>
@@ -397,26 +532,75 @@ export default function App() {
           </Tooltip>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setModal("templates")}>
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+          <Button variant="outline" size="sm" onClick={() => setModal("templates")} className="hidden sm:inline-flex">
             <Zap /> Templates
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setModal("code")}>
+          <Button variant="outline" size="sm" onClick={() => setModal("code")} className="hidden md:inline-flex">
             <Code2 /> Code
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setModal("preview")}>
+          <Button variant="outline" size="sm" onClick={() => setModal("preview")} className="hidden md:inline-flex">
             <Eye /> Preview
           </Button>
-          <Button size="sm" onClick={copyReact}>
+          <Button size="sm" onClick={copyReact} className="hidden lg:inline-flex">
             <Copy /> Copy React code
           </Button>
+
+          {/* overflow menu — carries everything hidden at this breakpoint */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label="More actions">
+                <MoreHorizontal />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <div className="flex items-center gap-1 lg:hidden">
+                <Button variant="ghost" size="icon-sm" aria-label="Undo (Ctrl+Z)" disabled={past.length === 0} onClick={undo}>
+                  <Undo2 />
+                </Button>
+                <Button variant="ghost" size="icon-sm" aria-label="Redo (Ctrl+Shift+Z)" disabled={future.length === 0} onClick={redo}>
+                  <Redo2 />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={device === "desktop" ? "Mobile width" : "Desktop width"}
+                  onClick={() => setDevice((d) => (d === "desktop" ? "mobile" : "desktop"))}
+                >
+                  {device === "desktop" ? <Smartphone /> : <Monitor />}
+                </Button>
+                <Button variant="ghost" size="icon-sm" aria-label="Toggle dark mode" onClick={() => setDark((v) => !v)}>
+                  {dark ? <Sun /> : <Moon />}
+                </Button>
+              </div>
+              <div className="lg:hidden">
+                <DropdownMenuSeparator />
+              </div>
+              <DropdownMenuItem className="sm:hidden" onClick={() => setModal("templates")}>
+                <Zap /> Templates…
+              </DropdownMenuItem>
+              <DropdownMenuItem className="md:hidden" onClick={() => setModal("code")}>
+                <Code2 /> Code…
+              </DropdownMenuItem>
+              <DropdownMenuItem className="md:hidden" onClick={() => setModal("preview")}>
+                <Eye /> Preview…
+              </DropdownMenuItem>
+              <DropdownMenuItem className="lg:hidden" onClick={copyReact}>
+                <Copy /> Copy React code
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setModal("sheets")}>
+                <Settings2 /> Collect responses…
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
       {/* ---------- body ---------- */}
       <div className="flex min-h-0 flex-1">
-        {/* icon rail */}
-        <nav className="flex w-14 shrink-0 flex-col items-center gap-1 border-r bg-sidebar py-3" aria-label="Panels">
+        {/* icon rail — permanent from lg, drawer below */}
+        <nav className="hidden w-14 shrink-0 flex-col items-center gap-1 border-r bg-sidebar py-3 lg:flex" aria-label="Panels">
           {railItems.map((p) => (
             <Tooltip key={p.id}>
               <TooltipTrigger asChild>
@@ -436,50 +620,121 @@ export default function App() {
           ))}
         </nav>
 
-        {/* side panel */}
-        <aside className="flex w-72 shrink-0 flex-col border-r bg-sidebar">
-          <div className="flex h-10 items-center border-b px-3">
-            <span className="text-sm font-medium">{railItems.find((r) => r.id === panel)?.label}</span>
-            {panel === "style" && preset && (
-              <span className="ml-auto text-xs text-muted-foreground">shadcn {preset.name}</span>
-            )}
-          </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-3">
-            {panel === "blocks" && <BlocksPanel onAdd={(t) => addField(t)} />}
-            {panel === "style" && (
-              <StylePanel
-                theme={doc.theme}
-                preset={preset}
-                presetDark={presetDark}
-                onPreset={applyPreset}
-                onPresetMode={togglePresetMode}
-                onTokens={(theme) => update((d) => ({ ...d, theme }), true)}
-                onClearPreset={() => setPreset(null)}
-              />
-            )}
-            {panel === "form" && (
-              <FormPanel
-                formTitle={doc.title}
-                onTitleChange={(title) => update((d) => ({ ...d, title }), true)}
-                variant={doc.variant}
-                onVariantChange={(variant) => update((d) => ({ ...d, variant }))}
-              />
-            )}
-          </div>
-        </aside>
+        {/* side panel — permanent from lg (collapsible at lg, fixed at xl) */}
+        {isLg && (
+          <aside
+            className={
+              panelOpen ? "flex w-72 shrink-0 flex-col border-r bg-sidebar" : "flex w-12 shrink-0 flex-col border-r bg-sidebar"
+            }
+          >
+            <div className="flex h-10 items-center border-b px-3">
+              {panelOpen ? (
+                <>
+                  <span className="text-sm font-medium">{railItems.find((r) => r.id === panel)?.label}</span>
+                  <div className="ml-auto flex items-center gap-1.5">
+                    {panel === "style" && preset && (
+                      <span className="text-xs text-muted-foreground">shadcn {preset.name}</span>
+                    )}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label="Collapse panel"
+                          onClick={() => setPanelOpen(false)}
+                        >
+                          <PanelLeftClose />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">Collapse</TooltipContent>
+                    </Tooltip>
+                  </div>
+                </>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="mx-auto"
+                      aria-label="Expand panel"
+                      onClick={() => setPanelOpen(true)}
+                    >
+                      <PanelLeftOpen />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Expand</TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+            {panelOpen && <div className="min-h-0 flex-1 overflow-y-auto p-3">{panelBody}</div>}
+          </aside>
+        )}
+
+        {/* <lg drawer: rail + panel slide over the canvas */}
+        {!isLg && drawerOpen && (
+          <>
+            <div
+              className="fixed inset-0 top-14 z-30 bg-black/40 backdrop-blur-[1px]"
+              onClick={() => setDrawerOpen(false)}
+              aria-hidden
+            />
+            <div className="fixed bottom-0 left-0 top-14 z-40 flex w-72 max-w-[85vw] flex-col border-r bg-sidebar shadow-xl">
+              <div className="flex h-10 shrink-0 items-center border-b px-3">
+                <span className="text-sm font-medium">{railItems.find((r) => r.id === panel)?.label}</span>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="ml-auto"
+                  aria-label="Close panel"
+                  onClick={() => setDrawerOpen(false)}
+                >
+                  <X />
+                </Button>
+              </div>
+              <div className="flex shrink-0 items-center gap-1 border-b px-2 py-1.5">
+                {railItems.map((p) => (
+                  <Button
+                    key={p.id}
+                    variant={panel === p.id ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-7 flex-1 gap-1.5 px-2 text-xs"
+                    aria-pressed={panel === p.id}
+                    onClick={() => setPanel(p.id)}
+                  >
+                    {p.icon}
+                    {p.label}
+                  </Button>
+                ))}
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto p-3">{panelBody}</div>
+            </div>
+          </>
+        )}
 
         {/* canvas */}
         <main
           className={
-            "relative min-w-0 flex-1 overflow-auto bg-accent/40 p-6 " +
+            "studio-canvas relative min-w-0 flex-1 overflow-auto bg-accent/40 p-3 sm:p-6 " +
             (device === "mobile" ? "flex justify-center" : "")
           }
           onClick={() => setSelected(null)}
         >
+          {/* <lg panel trigger */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="absolute left-3 top-3 z-20 lg:hidden"
+            aria-label="Open panels"
+            onClick={() => setDrawerOpen(true)}
+          >
+            <Blocks /> Panels
+          </Button>
+
           <div
             className={
               "mx-auto w-full rounded-xl border bg-card shadow-sm transition-[max-width] " +
-              (device === "mobile" ? "max-w-[390px]" : "max-w-2xl")
+              (device === "mobile" ? "mt-12 max-w-[390px] lg:mt-0" : "mt-10 max-w-2xl lg:mt-0")
             }
           >
             <PaperForm
@@ -490,29 +745,41 @@ export default function App() {
               onSelect={setSelected}
               onDelete={deleteField}
               onDuplicate={duplicateField}
+              onMove={moveField}
               onDrop={handleDrop}
+              onOpenTemplates={() => setModal("templates")}
             />
           </div>
 
-          {selectedField && (
+          {/* <xl: floating inspector card over the canvas */}
+          {selectedField && inspectorBody && !dockInspector && (
             <div
-              className="absolute right-4 top-4 bottom-4 z-10 w-72 overflow-y-auto rounded-lg border bg-popover shadow-lg"
+              className="absolute bottom-4 right-4 top-4 z-10 w-72 overflow-y-auto rounded-lg border bg-popover shadow-lg sm:w-80"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="sticky top-0 z-10 flex h-10 items-center justify-between border-b bg-popover px-3">
                 <span className="text-sm font-medium">Field settings</span>
                 <Button variant="ghost" size="icon-sm" aria-label="Close" onClick={() => setSelected(null)}>
-                  ✕
+                  <X />
                 </Button>
               </div>
-              <Inspector
-                field={selectedField}
-                otherFields={otherFields}
-                onChange={(patch) => selected !== null && patchField(selected, patch)}
-              />
+              {inspectorBody}
             </div>
           )}
         </main>
+
+        {/* xl: inspector docked as a true third column (sibling of main) */}
+        {selectedField && inspectorBody && dockInspector && (
+          <aside className="flex w-80 shrink-0 flex-col border-l bg-sidebar" onClick={(e) => e.stopPropagation()}>
+            <div className="flex h-10 shrink-0 items-center justify-between border-b px-3">
+              <span className="text-sm font-medium">Field settings</span>
+              <Button variant="ghost" size="icon-sm" aria-label="Close field settings" onClick={() => setSelected(null)}>
+                <X />
+              </Button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto">{inspectorBody}</div>
+          </aside>
+        )}
       </div>
 
       {modal === "templates" && <TemplatesModal onPick={applyTemplate} onClose={() => setModal("none")} />}
@@ -521,7 +788,19 @@ export default function App() {
           fields={doc.fields}
           theme={doc.theme}
           variant={doc.variant}
+          endpoint={doc.endpoint}
           onApplyJson={applyJson}
+          onClose={() => setModal("none")}
+        />
+      )}
+      {modal === "sheets" && (
+        <SheetsModal
+          onConnect={(url) => {
+            update((d) => ({ ...d, endpoint: url }))
+            setModal("none")
+            setPanel("form")
+            toast.success("Google Sheets connected — Preview to test a submission")
+          }}
           onClose={() => setModal("none")}
         />
       )}
@@ -530,12 +809,18 @@ export default function App() {
           fields={doc.fields}
           theme={doc.theme}
           variant={doc.variant}
+          endpoint={doc.endpoint}
           device={device}
           onClose={() => setModal("none")}
         />
       )}
 
       <Toaster position="bottom-right" />
+      {/* sr hint for keyboard users */}
+      <span className="sr-only">
+        Keyboard: Delete removes the selected field, Ctrl+D duplicates, arrow keys move it, Escape deselects, Ctrl+Z
+        undo, Ctrl+Shift+Z redo.
+      </span>
     </div>
   )
 }

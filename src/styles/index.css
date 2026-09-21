@@ -51,6 +51,41 @@
   margin-top: 4px;
 }
 
+/* ---------- endpoint submissions (2.2.0, optional styles) ---------- */
+.ki-status {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.ki-status-busy {
+  color: var(--ki-helper, #6b7280);
+}
+
+.ki-status-success {
+  color: var(--ki-accent, #6366f1);
+}
+
+.ki-status-error {
+  color: var(--ki-error, #dc2626);
+}
+
+.ki-status-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: inherit;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ki-status-link:focus-visible {
+  outline: 2px solid var(--ki-accent, #6366f1);
+  outline-offset: 2px;
+}
+
 /* ---------- conversational variant (2.1.0, optional styles) ---------- */
 .ki-conversational .ki-progress {
   height: 3px;

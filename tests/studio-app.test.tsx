@@ -3,7 +3,9 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import App from "../studio/App"
 
 /**
- * Studio App shell smoke tests (shadcn rebuild).
+ * Studio App shell smoke tests (shadcn rebuild, responsive shell).
+ * jsdom reports matchMedia false → the <lg layout renders: the rail + side
+ * panel live inside a drawer that must be opened via the "Open panels" button.
  * The canvas renders the real KiForm, so "add field" must produce real inputs.
  */
 
@@ -13,27 +15,34 @@ function panelButton(label: string): HTMLElement {
   return btns[0]
 }
 
+/** jsdom is always <lg: open the panel drawer before touching rail/panel UI. */
+function openDrawer() {
+  fireEvent.click(screen.getByRole("button", { name: "Open panels" }))
+}
+
 describe("studio app (shadcn rebuild)", () => {
   beforeEach(() => {
     localStorage.clear()
   })
 
-  it("mounts the shell with topbar, rail and canvas", () => {
+  it("mounts the shell with topbar, drawer rail and canvas", () => {
     const { container } = render(<App />)
     expect(screen.getByPlaceholderText("Untitled form")).toBeTruthy()
     // canvas paper present
     expect(container.querySelector(".studio-root")).toBeTruthy()
-    // rail buttons
+    // <lg chrome: drawer trigger + overflow menu
+    expect(panelButton("Open panels")).toBeTruthy()
+    expect(panelButton("More actions")).toBeTruthy()
+    // open drawer → rail buttons available
+    openDrawer()
     expect(panelButton("Blocks")).toBeTruthy()
     expect(panelButton("Style")).toBeTruthy()
     expect(panelButton("Form")).toBeTruthy()
-    // topbar actions
-    expect(panelButton("Templates")).toBeTruthy()
-    expect(panelButton("Copy React code")).toBeTruthy()
   })
 
   it("appends a field from the Blocks panel and selects it", async () => {
     render(<App />)
+    openDrawer()
     // default template (signup) already has one email input; adding makes two
     const before = screen.getAllByPlaceholderText("you@company.com").length
     fireEvent.click(screen.getByRole("button", { name: /email/i }))
@@ -48,6 +57,7 @@ describe("studio app (shadcn rebuild)", () => {
 
   it("opens the Inspector and edits the field name", async () => {
     render(<App />)
+    openDrawer()
     fireEvent.click(screen.getByRole("button", { name: /^text$/i }))
     await waitFor(() => {
       expect(screen.getAllByText("Field settings").length).toBeGreaterThan(0)
@@ -61,6 +71,7 @@ describe("studio app (shadcn rebuild)", () => {
 
   it("applies a shadcn preset from the Style panel and reflects it in the doc theme", async () => {
     render(<App />)
+    openDrawer()
     fireEvent.click(panelButton("Style"))
     await waitFor(() => {
       expect(screen.getAllByText("shadcn/ui themes").length).toBeGreaterThan(0)

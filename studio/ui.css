@@ -1,6 +1,7 @@
 /* ki-forms Studio — Tailwind v4 + shadcn/ui tokens (new-york, light+dark).
    Tailwind is scoped to the studio app; the ki-forms library CSS is untouched. */
 @import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -91,4 +92,14 @@
   body {
     margin: 0;
   }
+}
+
+/* Canvas backdrop: subtle dot grid (respects dark mode + reduced motion). */
+.studio-canvas {
+  background-image: radial-gradient(color-mix(in oklab, var(--border) 70%, transparent) 1px, transparent 1px);
+  background-size: 22px 22px;
+  background-position: -1px -1px;
+}
+.dark .studio-canvas {
+  background-image: radial-gradient(color-mix(in oklab, var(--border) 45%, transparent) 1px, transparent 1px);
 }

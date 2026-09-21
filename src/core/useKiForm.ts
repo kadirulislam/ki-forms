@@ -31,7 +31,8 @@ export function useKiForm(options: UseKiFormOptions): FormApi {
     })
   }
 
-  function validate() {
+  /** Validate all visible fields, update the error map, return pass/fail (2.2.0). */
+  function validate(): boolean {
     const newErrors: Record<string, string> = {}
 
     for (const field of normalizedFields) {
@@ -97,12 +98,22 @@ export function useKiForm(options: UseKiFormOptions): FormApi {
     onSubmit?.(values)
   }
 
+  function handleSubmitChecked(e?: React.FormEvent): boolean {
+    if (e) e.preventDefault()
+    const isValid = validate()
+    if (!isValid) return false
+    onSubmit?.(values)
+    return true
+  }
+
   return {
     fields: normalizedFields,
     values,
     errors,
     setValue,
     handleSubmit,
-    validateField
+    validateField,
+    validate,
+    handleSubmitChecked
   }
 }

@@ -290,6 +290,29 @@ inserts a newline instead of advancing.
 
 ---
 
+## 📥 Collect Responses (new in 2.2)
+
+No backend? Add `endpoint` and every valid submit is POSTed as JSON — no server
+actions, no wiring:
+
+```jsx
+<KiForm
+  fields={fields}
+  endpoint="https://script.google.com/macros/s/…/exec"
+  submitLabel="Sign up"
+/>
+```
+
+- Payload: `{ values, meta }` — `meta` carries `submittedAt`, `pageUrl`, `referrer`, `userAgent`.
+- Built-in pending/success/error status line (fully re-labelable, or hide it with `hideSubmitStatus`).
+- Works with **Formspree, Web3Forms, Basin, Discord/automation webhooks** — anything that accepts a JSON POST.
+- **Google Sheets with zero code**: the Schema Studio generates a ~50-line Apps Script — paste it into your Sheet once, connect the `/exec` URL, and every submission lands as a row. (Apps Script can't answer CORS preflights, so ki-forms automatically sends those endpoints as `text/plain` — no config needed.)
+- `onSubmit` still fires as before; `onSubmitted(result)` reports the request outcome.
+
+New props: `endpoint`, `method` (default `POST`), `headers`, `submitLabel`, `submittingLabel`, `successLabel`, `errorLabel`, `hideSubmitStatus`, `onSubmitted`.
+
+---
+
 ## ⚖️ Comparison
 
 | Feature           | ki-forms | React Hook Form |

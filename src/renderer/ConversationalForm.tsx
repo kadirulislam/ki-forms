@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react"
-import type { FormEvent, KeyboardEvent } from "react"
+import type { FormEvent, KeyboardEvent, ReactNode } from "react"
 import { FieldRenderer } from "./FieldRenderer"
 import type { FormApi, KiFormComponents, KiTheme } from "../types"
 import { themeToCssVars } from "../theme"
@@ -11,13 +11,28 @@ type Props = {
   className?: string
   theme?: KiTheme
   stepLabels?: { next?: string; previous?: string; submit?: string }
+  /** Prebuilt <button type=submit> injected by KiForm (busy/label aware). */
+  submitButton?: ReactNode
+  /** Built-in status line injected by KiForm (endpoint submissions only). */
+  statusLine?: ReactNode
+  /** Full submit handler from KiForm (validation + endpoint POST). */
+  onSubmitEvent?: (e?: FormEvent) => void
 }
 
 /**
  * variant="conversational" — one visible field per step (the one Typeform-style
  * feature ki-forms adopts). Added in 2.1.0.
  */
-export function ConversationalForm({ form, components, className, theme, stepLabels }: Props) {
+export function ConversationalForm({
+  form,
+  components,
+  className,
+  theme,
+  stepLabels,
+  submitButton,
+  statusLine,
+  onSubmitEvent,
+}: Props) {
   const visible = useMemo(
     () => form.fields.filter((f) => shouldShow(f, form.values)),
     [form.fields, form.values]
@@ -50,6 +65,10 @@ export function ConversationalForm({ form, components, className, theme, stepLab
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    if (onSubmitEvent) {
+      onSubmitEvent()
+      return
+    }
     form.handleSubmit()
   }
 
@@ -72,7 +91,7 @@ export function ConversationalForm({ form, components, className, theme, stepLab
       onSubmit={handleSubmit}
     >
       {visible.length === 0 || !current ? (
-        <button type="submit" className="ki-step-btn primary">{labels.submit}</button>
+        submitButton ?? <button type="submit" className="ki-step-btn primary">{labels.submit}</button>
       ) : (
         <>
           <div className="ki-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
@@ -93,13 +112,16 @@ export function ConversationalForm({ form, components, className, theme, stepLab
               {clamped + 1} / {visible.length}
             </span>
             {isLast ? (
-              <button type="submit" className="ki-step-btn primary">{labels.submit}</button>
+              submitButton ?? (
+                <button type="submit" className="ki-step-btn primary">{labels.submit}</button>
+              )
             ) : (
               <button type="button" className="ki-step-btn primary" onClick={() => go(1)}>
                 {labels.next} →
               </button>
             )}
           </div>
+          {statusLine}
         </>
       )}
     </form>
