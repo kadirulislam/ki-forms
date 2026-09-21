@@ -1,5 +1,6 @@
 import { useDndContext, useDroppable } from "@dnd-kit/core"
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable"
+import { BLOCK_TYPE_LABELS } from "./BlocksPanel"
 import { CSS } from "@dnd-kit/utilities"
 import type { Field } from "../../src/types"
 import { applyDefaults } from "../../src/utils/defaults"
@@ -102,10 +103,16 @@ function SortableFieldCard({
       className={cn(
         "group relative my-1 rounded-lg border border-transparent transition-colors",
         "hover:border-border hover:bg-accent/30",
-        selected && "border-[--studio-accent] bg-[--studio-accent]/5 ring-1 ring-[--studio-accent]/30",
+        selected && "border-dashed border-[--studio-accent] bg-[--studio-accent]/5",
         isDragging && "opacity-30",
       )}
     >
+      {/* selected: corner type chip (Untitled-style) */}
+      {selected && (
+        <span className="absolute -top-2.5 left-3 z-10 rounded-[4px] bg-[--studio-accent] px-1.5 py-0.5 text-[10px] font-medium leading-none text-white">
+          {BLOCK_TYPE_LABELS[field.type || "text"] ?? field.type}
+        </span>
+      )}
       {/* grip — the only drag-activation handle */}
       <button
         type="button"

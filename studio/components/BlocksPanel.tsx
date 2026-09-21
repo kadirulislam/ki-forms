@@ -2,27 +2,79 @@ import { useDraggable } from "@dnd-kit/core"
 import { useState } from "react"
 import type { FieldType } from "../../src/types"
 import { cn } from "../lib/utils"
-import {
-  AtSign,
-  CheckSquare,
-  ChevronDownSquare,
-  GripVertical,
-  Hash,
-  Info,
-  KeyRound,
-  Search,
-  Type,
-  AlignLeft,
-} from "lucide-react"
+import { Info, Search } from "lucide-react"
 
-const BLOCKS: { type: FieldType; label: string; group: "basic" | "choice"; icon: React.ReactNode }[] = [
-  { type: "text", label: "Text", group: "basic", icon: <Type /> },
-  { type: "email", label: "Email", group: "basic", icon: <AtSign /> },
-  { type: "password", label: "Password", group: "basic", icon: <KeyRound /> },
-  { type: "number", label: "Number", group: "basic", icon: <Hash /> },
-  { type: "textarea", label: "Message", group: "basic", icon: <AlignLeft /> },
-  { type: "select", label: "Dropdown", group: "choice", icon: <ChevronDownSquare /> },
-  { type: "checkbox", label: "Checkbox", group: "choice", icon: <CheckSquare /> },
+/** Abstract wireframe thumbnail per field type (Untitled-style palette). */
+function Wireframe({ type }: { type: FieldType }) {
+  const line = "rounded-[2px] bg-foreground/25"
+  const box = "rounded-[3px] border border-foreground/25"
+  switch (type) {
+    case "text":
+    case "email":
+      return (
+        <div className="flex w-full flex-col items-center gap-1">
+          <span className={cn(line, "h-[3px] w-3/5")} />
+          <span className={cn(box, "h-3.5 w-4/5")} />
+        </div>
+      )
+    case "password":
+      return (
+        <div className="flex w-full flex-col items-center gap-1">
+          <span className={cn(line, "h-[3px] w-2/5")} />
+          <span className={cn(box, "flex h-3.5 w-4/5 items-center justify-center gap-0.5")}>
+            <span className="size-1 rounded-full bg-foreground/30" />
+            <span className="size-1 rounded-full bg-foreground/30" />
+            <span className="size-1 rounded-full bg-foreground/30" />
+          </span>
+        </div>
+      )
+    case "number":
+      return (
+        <div className="flex w-full flex-col items-center gap-1">
+          <span className={cn(line, "h-[3px] w-1/3")} />
+          <span className={cn(box, "flex h-3.5 w-4/5 items-center justify-between px-1")}>
+            <span className={cn(line, "h-[2px] w-1/2")} />
+            <span className={cn(box, "h-2 w-2")} />
+          </span>
+        </div>
+      )
+    case "textarea":
+      return (
+        <div className="flex w-full flex-col items-center gap-1">
+          <span className={cn(line, "h-[3px] w-1/2")} />
+          <span className={cn(box, "h-6 w-4/5")}>
+            <span className={cn(line, "mt-1 ml-1 block h-[2px] w-2/3")} />
+          </span>
+        </div>
+      )
+    case "select":
+      return (
+        <div className="flex w-full flex-col items-center gap-1">
+          <span className={cn(line, "h-[3px] w-1/2")} />
+          <span className={cn(box, "flex h-3.5 w-4/5 items-center justify-between px-1")}>
+            <span className={cn(line, "h-[2px] w-1/2")} />
+            <span className="text-[7px] leading-none text-foreground/40">▾</span>
+          </span>
+        </div>
+      )
+    case "checkbox":
+      return (
+        <div className="flex w-full items-center justify-center gap-1.5">
+          <span className={cn(box, "size-3")} />
+          <span className={cn(line, "h-[3px] w-2/5")} />
+        </div>
+      )
+  }
+}
+
+const BLOCKS: { type: FieldType; label: string; group: "basic" | "choice" }[] = [
+  { type: "text", label: "Text", group: "basic" },
+  { type: "email", label: "Email", group: "basic" },
+  { type: "password", label: "Password", group: "basic" },
+  { type: "number", label: "Number", group: "basic" },
+  { type: "textarea", label: "Message", group: "basic" },
+  { type: "select", label: "Dropdown", group: "choice" },
+  { type: "checkbox", label: "Checkbox", group: "choice" },
 ]
 
 function PaletteCard({
@@ -45,14 +97,17 @@ function PaletteCard({
       {...listeners}
       onClick={() => onAdd(block.type)}
       className={cn(
-        "group flex cursor-grab touch-none select-none items-center gap-2 rounded-lg border bg-card px-2.5 py-2 text-sm shadow-xs transition-colors",
-        "hover:border-[--studio-accent]/50 hover:bg-accent active:cursor-grabbing",
+        "group flex cursor-grab touch-none select-none flex-col items-center gap-2 rounded-lg border bg-card px-2 pb-2.5 pt-3.5 transition-colors",
+        "hover:border-[--studio-accent]/60 hover:bg-accent/60 active:cursor-grabbing",
         isDragging && "opacity-30",
       )}
     >
-      <GripVertical className="size-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground" />
-      <span className="text-[--studio-accent] [&_svg]:size-4">{block.icon}</span>
-      <span className="truncate">{block.label}</span>
+      <span className="flex h-10 w-full items-center justify-center">
+        <Wireframe type={block.type} />
+      </span>
+      <span className="truncate text-xs font-medium text-foreground/80 group-hover:text-foreground">
+        {block.label}
+      </span>
     </button>
   )
 }

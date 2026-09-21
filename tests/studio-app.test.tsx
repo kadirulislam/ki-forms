@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest"
-import { render, screen, fireEvent, waitFor, within, cleanup } from "@testing-library/react"
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react"
 import App from "../studio/App"
 
 /**
@@ -107,13 +107,13 @@ describe("studio app (shadcn rebuild)", () => {
     )
     render(<App />)
     const card = screen.getByLabelText("Field email")
-    const wrapper = card.closest(".group")!
+    const wrapper = card.closest(".group") as HTMLElement
     fireEvent.mouseEnter(wrapper)
     fireEvent.click(within(wrapper).getByRole("button", { name: "Duplicate" }))
     await waitFor(() => {
       expect(screen.getByLabelText("Field email_copy")).toBeTruthy()
     })
-    const copyWrapper = screen.getByLabelText("Field email_copy").closest(".group")!
+    const copyWrapper = screen.getByLabelText("Field email_copy").closest(".group") as HTMLElement
     fireEvent.click(within(copyWrapper).getByRole("button", { name: "Delete" }))
     await waitFor(() => {
       expect(screen.queryByLabelText("Field email_copy")).toBeNull()
@@ -132,7 +132,7 @@ describe("studio app (shadcn rebuild)", () => {
     )
     render(<App />)
     const second = screen.getByLabelText("Field second")
-    const wrapper = second.closest(".group")!
+    const wrapper = second.closest(".group") as HTMLElement
     fireEvent.mouseEnter(wrapper)
     fireEvent.click(within(wrapper).getByRole("button", { name: "Move up" }))
     await waitFor(() => {
