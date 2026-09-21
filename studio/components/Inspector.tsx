@@ -4,11 +4,15 @@ import { Label } from "./ui/label"
 import { Switch } from "./ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Separator } from "./ui/separator"
+import { Button } from "./ui/button"
+import { Copy, Trash2 } from "lucide-react"
 
 export type InspectorProps = {
   field: Field
   otherFields: Field[]
   onChange: (patch: Partial<Field>) => void
+  onDuplicate?: () => void
+  onDelete?: () => void
 }
 
 const TYPES: FieldType[] = ["text", "email", "password", "number", "textarea", "select", "checkbox"]
@@ -31,7 +35,7 @@ function CheckRow({ label, checked, onCheckedChange }: { label: string; checked:
   )
 }
 
-export function Inspector({ field, otherFields, onChange }: InspectorProps) {
+export function Inspector({ field, otherFields, onChange, onDuplicate, onDelete }: InspectorProps) {
   const hideLabel = field.label === false
   const labelText = hideLabel || typeof field.label !== "string" ? "" : field.label
 
@@ -183,6 +187,22 @@ export function Inspector({ field, otherFields, onChange }: InspectorProps) {
           )}
         </div>
         <p className="text-[11px] text-muted-foreground">AND/OR groups can be edited in the JSON tab.</p>
+      </div>
+
+      <Separator />
+
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" className="flex-1" onClick={onDuplicate}>
+          <Copy /> Duplicate
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1 text-destructive hover:bg-destructive hover:text-white"
+          onClick={onDelete}
+        >
+          <Trash2 /> Delete
+        </Button>
       </div>
     </div>
   )

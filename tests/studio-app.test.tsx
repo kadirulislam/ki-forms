@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest"
-import { render, screen, fireEvent, waitFor } from "@testing-library/react"
+import { render, screen, fireEvent, waitFor, within, cleanup } from "@testing-library/react"
 import App from "../studio/App"
 
 /**
@@ -43,11 +43,12 @@ describe("studio app (shadcn rebuild)", () => {
   it("appends a field from the Blocks panel and selects it", async () => {
     render(<App />)
     openDrawer()
-    // default template (signup) already has one email input; adding makes two
-    const before = screen.getAllByPlaceholderText("you@company.com").length
-    fireEvent.click(screen.getByRole("button", { name: /email/i }))
+    // canvas cards are aria-labeled "Field <name>"; the signup template has none named emailField
+    expect(screen.queryByLabelText("Field emailField")).toBeNull()
+    // exact "Email" = palette card (canvas cards are "Field …")
+    fireEvent.click(screen.getByRole("button", { name: "Email" }))
     await waitFor(() => {
-      expect(screen.getAllByPlaceholderText("you@company.com").length).toBe(before + 1)
+      expect(screen.getByLabelText("Field emailField")).toBeTruthy()
     })
     // inspector opens for the new field
     await waitFor(() => {
@@ -86,9 +87,80 @@ describe("studio app (shadcn rebuild)", () => {
     })
   })
 
+  it("canvas preview mirrors library defaulting (label + placeholder)", async () => {
+    localStorage.setItem(
+      "ki-studio-doc-v2",
+      JSON.stringify({ title: "T", fields: [{ name: "fullName" }], theme: {}, variant: "classic" }),
+    )
+    render(<App />)
+    // applyDefaults: "fullName" → label "Full Name", placeholder "Enter your full name"
+    await waitFor(() => {
+      expect(screen.getByText("Full Name")).toBeTruthy()
+      expect(screen.getByText("Enter your full name")).toBeTruthy()
+    })
+  })
+
+  it("canvas card actions: duplicate and delete update the doc", async () => {
+    localStorage.setItem(
+      "ki-studio-doc-v2",
+      JSON.stringify({ title: "T", fields: [{ name: "email", type: "email" }], theme: {}, variant: "classic" }),
+    )
+    render(<App />)
+    const card = screen.getByLabelText("Field email")
+    const wrapper = card.closest(".group")!
+    fireEvent.mouseEnter(wrapper)
+    fireEvent.click(within(wrapper).getByRole("button", { name: "Duplicate" }))
+    await waitFor(() => {
+      expect(screen.getByLabelText("Field email_copy")).toBeTruthy()
+    })
+    const copyWrapper = screen.getByLabelText("Field email_copy").closest(".group")!
+    fireEvent.click(within(copyWrapper).getByRole("button", { name: "Delete" }))
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Field email_copy")).toBeNull()
+    })
+  })
+
+  it("moves a field up via the card's move action", async () => {
+    localStorage.setItem(
+      "ki-studio-doc-v2",
+      JSON.stringify({
+        title: "T",
+        fields: [{ name: "first" }, { name: "second" }],
+        theme: {},
+        variant: "classic",
+      }),
+    )
+    render(<App />)
+    const second = screen.getByLabelText("Field second")
+    const wrapper = second.closest(".group")!
+    fireEvent.mouseEnter(wrapper)
+    fireEvent.click(within(wrapper).getByRole("button", { name: "Move up" }))
+    await waitFor(() => {
+      const raw = JSON.parse(localStorage.getItem("ki-studio-doc-v2") ?? "{}")
+      expect(raw.fields.map((f: { name: string }) => f.name)).toEqual(["second", "first"])
+    })
+  })
+
+  it("Inspector offers duplicate + delete actions", async () => {
+    localStorage.setItem(
+      "ki-studio-doc-v2",
+      JSON.stringify({ title: "T", fields: [{ name: "a" }, { name: "b" }], theme: {}, variant: "classic" }),
+    )
+    render(<App />)
+    fireEvent.click(screen.getByLabelText("Field a"))
+    await waitFor(() => {
+      expect(screen.getByTestId("inspector-panel")).toBeTruthy()
+    })
+    fireEvent.click(within(screen.getByTestId("inspector-panel")).getByRole("button", { name: "Duplicate" }))
+    await waitFor(() => {
+      expect(screen.getByLabelText("Field a_copy")).toBeTruthy()
+    })
+  })
+
   it("renders the empty state when the doc has no fields", () => {
     localStorage.setItem("ki-studio-doc-v2", JSON.stringify({ title: "Empty", fields: [], theme: {}, variant: "classic" }))
     render(<App />)
-    expect(screen.getByText(/Drop your first field here/i)).toBeTruthy()
+    expect(screen.getByText(/Your form is empty/i)).toBeTruthy()
+    expect(screen.getByRole("button", { name: /Start from a template/i })).toBeTruthy()
   })
 })

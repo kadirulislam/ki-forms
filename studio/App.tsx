@@ -1,6 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { Field, KiTheme } from "../src/types"
-import { PaperForm } from "./components/PaperForm"
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragStartEvent,
+  type DragOverEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable"
+import { FormCanvas, FieldPreview } from "./components/FormCanvas"
 import { BlocksPanel } from "./components/BlocksPanel"
 import { StylePanel } from "./components/StylePanel"
 import { FormPanel } from "./components/FormPanel"
@@ -22,6 +35,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "./components/ui/dropdown-menu"
+import { BLOCK_TYPE_LABELS } from "./components/BlocksPanel"
 import { toast } from "sonner"
 import {
   Undo2,
@@ -100,6 +114,11 @@ export default function App() {
   const [selected, setSelected] = useState<number | null>(null)
   const [panel, setPanel] = useState<Panel>("blocks")
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [drag, setDrag] = useState<
+    | { kind: "palette"; fieldType: string }
+    | { kind: "card"; index: number; name: string }
+    | null
+  >(null)
   const [panelOpen, setPanelOpen] = useState(() => {
     try {
       return localStorage.getItem("ki-studio-panel") !== "0"
@@ -122,6 +141,11 @@ export default function App() {
   const isXl = useMinWidth("xl")
   const isLg = useMinWidth("lg")
   const dockInspector = isXl // ≥1280px: inspector is a third column, no overlap
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
 
   /** Apply the studio accent + preset preview mode on <html> for Tailwind + Radix portals. */
   useEffect(() => {
@@ -224,23 +248,82 @@ export default function App() {
     [update, uniqueName],
   )
 
-  const handleDrop = useCallback(
-    (payload: { kind: "palette"; fieldType: string } | { kind: "move"; index: number }, at: number) => {
+  /** Insert a new palette field at `at` (append when at === length). */
+  const insertAt = useCallback(
+    (fieldType: string, at: number) => {
+      addField(fieldType, at >= docRef.current.fields.length ? undefined : at)
+    },
+    [addField],
+  )
+
+  /** Live reorder (also the drop commit for card drags). */
+  const reorder = useCallback(
+    (from: number, to: number) => {
       update((d) => {
-        if (payload.kind === "palette") return d // handled by addField below
-        const from = payload.index
-        if (from === at || from + 1 === at) return d
-        const moved = d.fields[from]
-        const without = d.fields.filter((_, i) => i !== from)
-        const target = at > from ? at - 1 : at
-        const fields = [...without]
-        fields.splice(target, 0, moved)
+        if (from === to || from < 0 || to < 0) return d
+        if (from >= d.fields.length || to >= d.fields.length) return d
+        const fields = [...d.fields]
+        const [moved] = fields.splice(from, 1)
+        fields.splice(to, 0, moved)
         return { ...d, fields }
       })
-      if (payload.kind === "palette") addField(payload.fieldType, at)
+      setSelected(to)
     },
-    [update, addField],
+    [update],
   )
+
+  /** dnd-kit: palette drops insert; card drags reorder live during the drag. */
+  const onDragStart = useCallback((e: DragStartEvent) => {
+    const id = String(e.active.id)
+    if (id.startsWith("palette-")) {
+      setDrag({ kind: "palette", fieldType: id.slice("palette-".length) })
+      return
+    }
+    setDrag({ kind: "card", index: docRef.current.fields.findIndex((f) => f.name === id), name: id })
+  }, [])
+
+  const onDragOver = useCallback(
+    (e: DragOverEvent) => {
+      const { active, over } = e
+      if (!over) return
+      const aId = String(active.id)
+      const oId = String(over.id)
+      if (aId.startsWith("palette-") || oId === "canvas-end") return
+      const from = docRef.current.fields.findIndex((f) => f.name === aId)
+      const to = docRef.current.fields.findIndex((f) => f.name === oId)
+      if (from === -1 || to === -1 || from === to) return
+      reorder(from, to)
+    },
+    [reorder],
+  )
+
+  const onDragEnd = useCallback(
+    (e: DragEndEvent) => {
+      const { over } = e
+      const d = drag
+      setDrag(null)
+      if (!over || !d) return
+      const oId = String(over.id)
+      if (d.kind === "palette") {
+        const to =
+          oId === "canvas-end"
+            ? docRef.current.fields.length
+            : docRef.current.fields.findIndex((f) => f.name === oId)
+        insertAt(d.fieldType, to === -1 ? docRef.current.fields.length : to)
+        return
+      }
+      if (oId === "canvas-end") {
+        const from = docRef.current.fields.findIndex((f) => f.name === d.name)
+        const last = docRef.current.fields.length - 1
+        if (from !== -1 && from !== last) reorder(from, last)
+      }
+    },
+    [drag, insertAt, reorder],
+  )
+
+  const onDragCancel = useCallback(() => setDrag(null), [])
+
+  const dragField = drag?.kind === "card" ? doc.fields.find((f) => f.name === drag.name) : undefined
 
   const moveField = useCallback(
     (index: number, delta: -1 | 1) => {
@@ -446,10 +529,20 @@ export default function App() {
         field={selectedField}
         otherFields={otherFields}
         onChange={(patch) => patchField(selected, patch)}
+        onDuplicate={() => duplicateField(selected)}
+        onDelete={() => deleteField(selected)}
       />
     ) : null
 
   return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDragEnd={onDragEnd}
+      onDragCancel={onDragCancel}
+    >
     <div className="studio-root flex h-screen flex-col overflow-hidden font-sans antialiased">
       {/* ---------- top bar ---------- */}
       <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-card px-2 sm:px-3">
@@ -737,16 +830,13 @@ export default function App() {
               (device === "mobile" ? "mt-12 max-w-[390px] lg:mt-0" : "mt-10 max-w-2xl lg:mt-0")
             }
           >
-            <PaperForm
+            <FormCanvas
               fields={doc.fields}
-              theme={doc.theme}
-              variant={doc.variant}
               selected={selected}
               onSelect={setSelected}
-              onDelete={deleteField}
-              onDuplicate={duplicateField}
               onMove={moveField}
-              onDrop={handleDrop}
+              onDuplicate={duplicateField}
+              onDelete={deleteField}
               onOpenTemplates={() => setModal("templates")}
             />
           </div>
@@ -754,6 +844,7 @@ export default function App() {
           {/* <xl: floating inspector card over the canvas */}
           {selectedField && inspectorBody && !dockInspector && (
             <div
+              data-testid="inspector-panel"
               className="absolute bottom-4 right-4 top-4 z-10 w-72 overflow-y-auto rounded-lg border bg-popover shadow-lg sm:w-80"
               onClick={(e) => e.stopPropagation()}
             >
@@ -770,7 +861,7 @@ export default function App() {
 
         {/* xl: inspector docked as a true third column (sibling of main) */}
         {selectedField && inspectorBody && dockInspector && (
-          <aside className="flex w-80 shrink-0 flex-col border-l bg-sidebar" onClick={(e) => e.stopPropagation()}>
+          <aside data-testid="inspector-panel" className="flex w-80 shrink-0 flex-col border-l bg-sidebar" onClick={(e) => e.stopPropagation()}>
             <div className="flex h-10 shrink-0 items-center justify-between border-b px-3">
               <span className="text-sm font-medium">Field settings</span>
               <Button variant="ghost" size="icon-sm" aria-label="Close field settings" onClick={() => setSelected(null)}>
@@ -815,12 +906,26 @@ export default function App() {
         />
       )}
 
+      {/* live drag ghosts (rendered at root so they escape overflow clipping) */}
+      <DragOverlay>
+        {drag?.kind === "card" && dragField ? (
+          <div className="w-96 rotate-1 rounded-lg border border-[--studio-accent]/40 bg-card p-3 shadow-xl">
+            <FieldPreview field={dragField} />
+          </div>
+        ) : drag?.kind === "palette" ? (
+          <div className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm shadow-xl">
+            <span className="text-[--studio-accent]">＋</span> {BLOCK_TYPE_LABELS[drag.fieldType] ?? drag.fieldType}
+          </div>
+        ) : null}
+      </DragOverlay>
+
       <Toaster position="bottom-right" />
       {/* sr hint for keyboard users */}
       <span className="sr-only">
         Keyboard: Delete removes the selected field, Ctrl+D duplicates, arrow keys move it, Escape deselects, Ctrl+Z
-        undo, Ctrl+Shift+Z redo.
+        undo, Ctrl+Shift+Z redo. Reorder fields with the keyboard via each field card's reorder handle.
       </span>
     </div>
+    </DndContext>
   )
 }
