@@ -163,4 +163,26 @@ describe("studio app (shadcn rebuild)", () => {
     expect(screen.getByText(/Your form is empty/i)).toBeTruthy()
     expect(screen.getByRole("button", { name: /Start from a template/i })).toBeTruthy()
   })
+
+  it("keeps the export editors constrained and the React export styled", async () => {
+    localStorage.setItem(
+      "ki-studio-doc-v2",
+      JSON.stringify({
+        title: "Responsive export",
+        fields: [{ name: "email", type: "email" }],
+        theme: {},
+        variant: "classic",
+      }),
+    )
+    render(<App />)
+
+    fireEvent.click(screen.getByRole("button", { name: "Code" }))
+
+    const jsonEditor = screen.getByRole("textbox") as HTMLTextAreaElement
+    expect(jsonEditor.className).toContain("min-w-0")
+    expect(jsonEditor.className).toContain("overflow-auto")
+    expect(jsonEditor.getAttribute("wrap")).toBe("off")
+
+    expect(screen.getByRole("tab", { name: /React component/i })).toBeTruthy()
+  })
 })

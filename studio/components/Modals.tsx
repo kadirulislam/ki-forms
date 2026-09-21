@@ -115,7 +115,7 @@ export function CodeModal({ fields, theme, variant, endpoint, onApplyJson, onClo
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex max-h-[85vh] w-full max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+      <DialogContent className="flex min-w-0 max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-h-[85vh] sm:max-w-3xl">
         <DialogHeader className="border-b p-4">
           <div className="flex items-center justify-between gap-2">
             <DialogTitle className="text-base">Export &amp; import</DialogTitle>
@@ -125,13 +125,13 @@ export function CodeModal({ fields, theme, variant, endpoint, onApplyJson, onClo
                   Apply changes
                 </Button>
               )}
-              <CopyButton getText={() => (tab === "json" ? toJson(fields) : snippet)} />
+              <CopyButton getText={() => (tab === "json" ? text : snippet)} />
             </div>
           </div>
           <DialogDescription className="sr-only">Copy or edit the form schema and React code</DialogDescription>
         </DialogHeader>
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as "json" | "react")} className="flex min-h-0 flex-1 flex-col gap-0">
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "json" | "react")} className="flex min-h-0 min-w-0 flex-1 flex-col gap-0">
           <div className="border-b p-2">
             <TabsList>
               <TabsTrigger value="json">
@@ -143,10 +143,11 @@ export function CodeModal({ fields, theme, variant, endpoint, onApplyJson, onClo
             </TabsList>
           </div>
 
-          <TabsContent value="json" className="flex min-h-0 flex-1 flex-col gap-2 p-4">
+          <TabsContent value="json" className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-4">
             <textarea
-              className="min-h-0 flex-1 resize-none rounded-md border border-input bg-card text-foreground p-3 font-mono text-xs leading-relaxed outline-none focus-visible:border-studio-accent focus-visible:ring-studio-accent/30 focus-visible:ring-[3px]"
+              className="min-h-[240px] min-w-0 w-full max-w-full flex-1 resize-none overflow-auto rounded-md border border-input bg-card p-3 font-mono text-xs leading-relaxed text-foreground outline-none focus-visible:border-studio-accent focus-visible:ring-studio-accent/30 focus-visible:ring-[3px]"
               spellCheck={false}
+              wrap="off"
               value={text}
               onChange={(e) => setText(e.target.value)}
             />
@@ -159,8 +160,8 @@ export function CodeModal({ fields, theme, variant, endpoint, onApplyJson, onClo
             )}
           </TabsContent>
 
-          <TabsContent value="react" className="min-h-0 flex-1 overflow-auto p-4">
-            <pre className="overflow-x-auto rounded-md border bg-muted/30 p-3 font-mono text-xs leading-relaxed">{snippet}</pre>
+          <TabsContent value="react" className="min-h-0 min-w-0 flex-1 overflow-auto p-4">
+            <pre className="min-w-0 max-w-full overflow-x-auto rounded-md border bg-muted/30 p-3 font-mono text-xs leading-relaxed">{snippet}</pre>
           </TabsContent>
         </Tabs>
       </DialogContent>

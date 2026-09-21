@@ -9,6 +9,8 @@ All notable changes to ki-forms are documented here.
 - Schema Studio React exports now generate valid theme object syntax.
 - Theme values and generated field strings are escaped safely, including font stacks containing quoted family names.
 - Schema Studio React exports now include the `ki-forms/styles.css` import.
+- Schema Studio JSON and React export tabs now stay within the viewport on narrow screens.
+- Copying from the Schema JSON tab now uses the current editor contents.
 
 ### Planned
 
