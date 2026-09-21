@@ -96,7 +96,7 @@ import "ki-forms/styles.css"
 ```js
 {
   name: "email",
-  type: "email",
+  type: "email", // "text" | "textarea" | "email" | "password" | "number" | "select" | "checkbox" | "tel" | "url" | "date"
   required: true,
   label: "Email",
   placeholder: "Enter your email",

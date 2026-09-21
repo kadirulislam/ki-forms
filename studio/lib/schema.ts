@@ -8,6 +8,9 @@ const FIELD_TYPES: readonly string[] = [
   "checkbox",
   "number",
   "textarea",
+  "tel",
+  "url",
+  "date",
 ]
 
 /**

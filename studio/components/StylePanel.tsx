@@ -67,7 +67,7 @@ export function StylePanel({ theme, preset, presetDark, onPreset, onPresetMode, 
                 className={cn(
                   "relative flex h-12 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border transition-all",
                   "hover:scale-[1.04] hover:shadow-sm",
-                  active && "border-[--studio-accent] ring-2 ring-[--studio-accent]/30",
+                  active && "border-studio-accent ring-2 ring-studio-accent/30",
                 )}
                 style={{ background: t.surfaceColor, borderColor: t.borderColor, color: t.textColor }}
                 onClick={() => onPreset(active ? null : p)}
@@ -75,7 +75,10 @@ export function StylePanel({ theme, preset, presetDark, onPreset, onPresetMode, 
                 <span className="h-2.5 w-6 rounded-sm" style={{ background: t.accentColor }} />
                 <span className="h-1.5 w-8 rounded-sm" style={{ background: t.borderColor }} />
                 {active && (
-                  <span className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-[--studio-accent] text-white">
+                  <span
+                    className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-studio-accent text-white"
+                    style={{ backgroundColor: "var(--studio-accent)", color: "#ffffff" }}
+                  >
                     <Check className="size-2.5" />
                   </span>
                 )}

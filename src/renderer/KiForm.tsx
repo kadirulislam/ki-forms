@@ -18,6 +18,9 @@ const defaultComponents: KiFormComponents = {
   textarea: TextareaField,
   number: InputField,
   checkbox: CheckboxField,
+  tel: InputField,
+  url: InputField,
+  date: InputField,
 }
 
 function StatusLine({

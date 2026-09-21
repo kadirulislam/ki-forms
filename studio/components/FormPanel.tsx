@@ -56,11 +56,11 @@ export function FormPanel({
               className={cn(
                 "flex cursor-pointer flex-col gap-1 rounded-lg border p-3 text-left transition-colors",
                 "hover:bg-accent",
-                variant === v.id && "border-[--studio-accent] bg-accent ring-1 ring-[--studio-accent]/30",
+                variant === v.id && "border-studio-accent bg-accent ring-1 ring-studio-accent/30",
               )}
               onClick={() => onVariantChange(v.id)}
             >
-              <span className="text-[--studio-accent] [&_svg]:size-4">{v.icon}</span>
+              <span className="text-studio-accent [&_svg]:size-4" style={{ color: "var(--studio-accent)" }}>{v.icon}</span>
               <strong className="text-sm font-medium">{v.name}</strong>
               <span className="text-xs text-muted-foreground">{v.desc}</span>
             </button>
@@ -108,7 +108,7 @@ export function FormPanel({
 
         <div className="flex flex-col gap-1.5 rounded-lg border bg-muted/40 p-2.5">
           <div className="flex items-center gap-1.5 text-xs font-medium">
-            <Database className="size-3.5 text-[--studio-accent]" />
+            <Database className="size-3.5 text-studio-accent" style={{ color: "var(--studio-accent)" }} />
             No backend? Use Google Sheets
           </div>
           <p className="text-[11px] leading-snug text-muted-foreground">

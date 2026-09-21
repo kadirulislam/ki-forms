@@ -6,56 +6,63 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* warm "Untitled"-style light theme: eggshell surfaces, dark warm ink */
-  --background: oklch(0.977 0.009 84);
-  --foreground: oklch(0.25 0.015 70);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.25 0.015 70);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.25 0.015 70);
-  --primary: oklch(0.27 0.02 70);
-  --primary-foreground: oklch(0.985 0.005 84);
-  --secondary: oklch(0.955 0.011 84);
-  --secondary-foreground: oklch(0.27 0.02 70);
-  --muted: oklch(0.955 0.011 84);
-  --muted-foreground: oklch(0.5 0.02 80);
-  --accent: oklch(0.95 0.012 84);
-  --accent-foreground: oklch(0.27 0.02 70);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.9 0.013 84);
-  --input: oklch(0.9 0.013 84);
-  --ring: oklch(0.7 0.02 80);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.962 0.011 84);
-  --sidebar-foreground: oklch(0.25 0.015 70);
-  /* default studio accent (publish-orange). shadcn presets override inline. */
-  --studio-accent: oklch(0.646 0.194 41);
-  --studio-radius: 0.625rem;
+  /* High-contrast, crystal-clear light theme */
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #0f172a;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #475569;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e2e8f0;
+  --input: #cbd5e1;
+  --ring: #ea580c;
+  --radius: 0.75rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f172a;
+  /* Rich terracotta/coral studio accent */
+  --studio-accent: #e05328;
+  --studio-accent-hover: #c9441c;
+  --studio-accent-subtle: rgba(224, 83, 40, 0.1);
+  --studio-accent-border: rgba(224, 83, 40, 0.4);
+  --studio-radius: 0.75rem;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 18%);
-  --ring: oklch(0.556 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
+  --background: #09090b;
+  --foreground: #f8fafc;
+  --card: #141417;
+  --card-foreground: #f8fafc;
+  --popover: #141417;
+  --popover-foreground: #f8fafc;
+  --primary: #f8fafc;
+  --primary-foreground: #09090b;
+  --secondary: #202024;
+  --secondary-foreground: #f8fafc;
+  --muted: #202024;
+  --muted-foreground: #94a3b8;
+  --accent: #202024;
+  --accent-foreground: #f8fafc;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #2a2a30;
+  --input: #383842;
+  --ring: #ea580c;
+  --sidebar: #0e0e11;
+  --sidebar-foreground: #f8fafc;
+  --studio-accent: #f97316;
+  --studio-accent-hover: #ea580c;
+  --studio-accent-subtle: rgba(249, 115, 22, 0.16);
+  --studio-accent-border: rgba(249, 115, 22, 0.45);
 }
 
 @theme inline {
@@ -80,10 +87,31 @@
   --color-ring: var(--ring);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-studio-accent: var(--studio-accent);
+  --color-studio-accent-hover: var(--studio-accent-hover);
+  --color-studio-accent-subtle: var(--studio-accent-subtle);
+  --color-studio-accent-border: var(--studio-accent-border);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* Bulletproof studio accent utility classes */
+.bg-studio-accent {
+  background-color: var(--studio-accent) !important;
+}
+.hover\:bg-studio-accent-hover:hover {
+  background-color: var(--studio-accent-hover) !important;
+}
+.text-studio-accent {
+  color: var(--studio-accent) !important;
+}
+.border-studio-accent {
+  border-color: var(--studio-accent) !important;
+}
+.bg-studio-accent-subtle {
+  background-color: var(--studio-accent-subtle) !important;
 }
 
 @layer base {
@@ -95,15 +123,44 @@
   }
   body {
     margin: 0;
+    color: var(--foreground);
+    background-color: var(--background);
   }
 }
 
-/* Canvas backdrop: subtle dot grid (respects dark mode + reduced motion). */
+/* Canvas backdrop: precise tactical dot grid with strong visual contrast */
 .studio-canvas {
-  background-image: radial-gradient(color-mix(in oklab, var(--border) 70%, transparent) 1px, transparent 1px);
-  background-size: 22px 22px;
+  background-color: #eef2f6;
+  background-image: radial-gradient(circle, rgba(100, 116, 139, 0.3) 1.25px, transparent 1.25px);
+  background-size: 24px 24px;
   background-position: -1px -1px;
 }
 .dark .studio-canvas {
-  background-image: radial-gradient(color-mix(in oklab, var(--border) 45%, transparent) 1px, transparent 1px);
+  background-color: #0c0c0e;
+  background-image: radial-gradient(circle, rgba(148, 163, 184, 0.18) 1.25px, transparent 1.25px);
+}
+
+/* Studio paper shadow & border with clear visibility */
+.studio-paper {
+  background-color: var(--card);
+  color: var(--card-foreground);
+  box-shadow: 0 16px 36px -12px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+.dark .studio-paper {
+  background-color: #141417;
+  color: #f8fafc;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+/* Subtle scrollbar for studio panels */
+.studio-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.studio-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.3);
+  border-radius: 9999px;
+}
+.studio-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
 }

@@ -145,7 +145,7 @@ export function CodeModal({ fields, theme, variant, endpoint, onApplyJson, onClo
 
           <TabsContent value="json" className="flex min-h-0 flex-1 flex-col gap-2 p-4">
             <textarea
-              className="min-h-0 flex-1 resize-none rounded-md border border-input bg-muted/30 p-3 font-mono text-xs leading-relaxed outline-none focus-visible:border-[--studio-accent] focus-visible:ring-[--studio-accent]/30 focus-visible:ring-[3px]"
+              className="min-h-0 flex-1 resize-none rounded-md border border-input bg-card text-foreground p-3 font-mono text-xs leading-relaxed outline-none focus-visible:border-studio-accent focus-visible:ring-studio-accent/30 focus-visible:ring-[3px]"
               spellCheck={false}
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -224,7 +224,7 @@ export function SheetsModal({ onConnect, onClose }: SheetsModalProps) {
 
           <div className="mb-3 flex flex-col gap-2 sm:flex-row">
             <input
-              className="h-9 min-w-0 flex-1 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-[--studio-accent] focus-visible:ring-[--studio-accent]/30 focus-visible:ring-[3px]"
+              className="h-9 min-w-0 flex-1 rounded-md border border-input bg-card text-foreground px-3 text-sm shadow-xs outline-none focus-visible:border-studio-accent focus-visible:ring-studio-accent/30 focus-visible:ring-[3px]"
               placeholder="https://script.google.com/macros/s/…/exec"
               value={url}
               onChange={(e) => setUrl(e.target.value)}

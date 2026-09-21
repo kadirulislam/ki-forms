@@ -35,7 +35,7 @@ describe("validateSchema", () => {
   })
 
   it("rejects unknown object types", () => {
-    const r = validateSchema([{ name: "x", type: "url" }])
+    const r = validateSchema([{ name: "x", type: "banana" }])
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.error).toContain("unknown type")
   })

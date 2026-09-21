@@ -33,7 +33,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "demo": "vite demo",
     "demo:build": "vite build --config vite.demo.config.ts",
-    "studio": "vite studio",
+    "studio": "vite --config vite.studio.config.ts",
     "studio:build": "vite build --config vite.studio.config.ts",
     "pages:build": "npm run demo:build && npm run studio:build",
     "clean": "rm -rf dist"

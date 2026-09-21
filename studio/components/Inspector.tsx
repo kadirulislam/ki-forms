@@ -15,7 +15,18 @@ export type InspectorProps = {
   onDelete?: () => void
 }
 
-const TYPES: FieldType[] = ["text", "email", "password", "number", "textarea", "select", "checkbox"]
+const TYPES: FieldType[] = [
+  "text",
+  "email",
+  "tel",
+  "url",
+  "number",
+  "password",
+  "textarea",
+  "select",
+  "checkbox",
+  "date",
+]
 
 function Row({ label, htmlFor, children }: { label: string; htmlFor?: string; children: React.ReactNode }) {
   return (
@@ -80,7 +91,7 @@ export function Inspector({ field, otherFields, onChange, onDuplicate, onDelete 
         <Row label="Options (one per line)">
           <textarea
             rows={4}
-            className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-[--studio-accent] focus-visible:ring-[--studio-accent]/30 focus-visible:ring-[3px]"
+            className="flex w-full rounded-md border border-input bg-card text-foreground px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-studio-accent focus-visible:ring-studio-accent/30 focus-visible:ring-[3px]"
             value={Array.isArray(field.options) ? field.options.map((o) => (typeof o === "string" ? o : o.value)).join("\n") : ""}
             onChange={(e) =>
               onChange({

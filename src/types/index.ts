@@ -8,6 +8,9 @@ export type FieldType =
   | "checkbox"
   | "number"
   | "textarea"
+  | "tel"
+  | "url"
+  | "date"
 
 export type ShowIf = {
   /** Dependency field. Required for a single condition; omit when using all/any groups. (optional since 2.1.0 — widening, 2.0.0 schemas unchanged) */
