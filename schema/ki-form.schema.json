@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kadirulislam.github.io/ki-forms/schema/ki-form.schema.json",
+  "title": "ki-forms schema",
+  "description": "Portable ki-forms form definition: either a bare fields array or a full document (fields + theme, variant, endpoint). Mirrors src/schema/validate.ts — the TypeScript validator stays canonical. Known intentional divergences: duplicate field names, cross-property range checks (min>max, minLength>maxLength), and regex compilability are rejected only by the TypeScript validator; unknown non-theme keys are tolerated by both.",
+  "anyOf": [
+    { "$ref": "#/definitions/fieldsArray" },
+    { "$ref": "#/definitions/document" }
+  ],
+  "definitions": {
+    "condition": {
+      "type": "object",
+      "required": ["field"],
+      "properties": {
+        "field": { "type": "string" },
+        "equals": true,
+        "notEquals": true
+      },
+      "oneOf": [
+        { "required": ["equals"], "not": { "required": ["notEquals"] } },
+        { "required": ["notEquals"], "not": { "required": ["equals"] } }
+      ]
+    },
+    "showIf": {
+      "type": "object",
+      "properties": {
+        "field": { "type": "string" },
+        "equals": true,
+        "notEquals": true,
+        "all": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/condition" } },
+        "any": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/condition" } }
+      },
+      "anyOf": [{ "required": ["field"] }, { "required": ["all"] }, { "required": ["any"] }],
+      "allOf": [
+        {
+          "if": { "required": ["field"] },
+          "then": {
+            "oneOf": [
+              { "required": ["equals"], "not": { "required": ["notEquals"] } },
+              { "required": ["notEquals"], "not": { "required": ["equals"] } }
+            ]
+          }
+        },
+        { "if": { "required": ["equals"] }, "then": { "required": ["field"] } },
+        { "if": { "required": ["notEquals"] }, "then": { "required": ["field"] } }
+      ]
+    },
+    "option": {
+      "anyOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "required": ["label", "value"],
+          "properties": {
+            "label": { "type": "string" },
+            "value": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "fieldName": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!\\s*$).+"
+    },
+    "fieldObject": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "$ref": "#/definitions/fieldName" },
+        "type": {
+          "enum": ["text", "email", "password", "select", "checkbox", "number", "textarea", "tel", "url", "date"]
+        },
+        "label": { "anyOf": [{ "type": "string" }, { "const": false }] },
+        "placeholder": { "type": "string" },
+        "options": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/option" } },
+        "defaultValue": { "anyOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }] },
+        "required": { "type": "boolean" },
+        "showIf": { "$ref": "#/definitions/showIf" },
+        "minLength": { "type": "integer", "minimum": 0 },
+        "maxLength": { "type": "integer", "minimum": 0 },
+        "pattern": { "type": "string" },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "className": { "type": "string" },
+        "helperText": { "type": "string" },
+        "onChange": false
+      }
+    },
+    "fieldsArray": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          { "$ref": "#/definitions/fieldName" },
+          { "$ref": "#/definitions/fieldObject" }
+        ]
+      }
+    },
+    "theme": {
+      "type": "object",
+      "properties": {
+        "accentColor": { "type": "string" },
+        "borderColor": { "type": "string" },
+        "errorColor": { "type": "string" },
+        "helperColor": { "type": "string" },
+        "radius": { "type": "string" },
+        "surfaceColor": { "type": "string" },
+        "textColor": { "type": "string" },
+        "fontFamily": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "document": {
+      "type": "object",
+      "required": ["fields"],
+      "properties": {
+        "$schema": { "type": "string" },
+        "version": { "const": 1 },
+        "name": { "type": "string" },
+        "title": { "type": "string" },
+        "fields": { "$ref": "#/definitions/fieldsArray" },
+        "theme": { "$ref": "#/definitions/theme" },
+        "variant": { "enum": ["classic", "conversational"] },
+        "endpoint": { "type": "string", "pattern": "^https?://" },
+        "customCss": { "type": "string", "maxLength": 20000 }
+      }
+    }
+  }
+}

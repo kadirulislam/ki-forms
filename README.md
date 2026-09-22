@@ -117,7 +117,12 @@ import "ki-forms/styles.css"
   required: true,
   label: "Email",
   placeholder: "Enter your email",
-  helperText: "We never share your email"
+  helperText: "We never share your email",
+  minLength: 5, // text-like values: min/max length, pattern (regex string)
+  maxLength: 100,
+  pattern: "^[^@]+@[^@]+$",
+  min: 18, // number fields: min/max value
+  max: 120
 }
 ```
 
@@ -371,6 +376,7 @@ const form = useKiForm({
 
 - JSON-based form builder  
 - Conditional fields + AND/OR groups (single source of truth)  
+- Field constraints (length, pattern, numeric range)
 - Smart defaults  
 - Theme tokens (CSS variables)  
 - Type-safe values via `InferFormValues`  

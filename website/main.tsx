@@ -98,6 +98,9 @@ function renderPage(route: string) {
             ["placeholder", "Input placeholder"],
             ["helperText", "Supporting text"],
             ["className", "Field-specific CSS class"],
+            ["minLength / maxLength", "Text length bounds (non-empty values)"],
+            ["pattern", "Regex text-like values must match"],
+            ["min / max", "Numeric range for number fields"],
           ]} />
           <CodeBlock code={CODE_CANONICAL} />
         </PageShell>
@@ -126,7 +129,7 @@ function renderPage(route: string) {
     case "docs/zod":
       return (
         <PageShell eyebrow="Validation" title="Zod validation">
-          <p>Use your own Zod instance with the optional adapter. Conditional requiredness comes from <code>showIf</code> plus <code>required: true</code>.</p>
+          <p>Use your own Zod instance with the optional adapter. Conditional requiredness comes from <code>showIf</code> plus <code>required: true</code>. Built-in constraints (<code>minLength</code>, <code>maxLength</code>, <code>pattern</code>, <code>min</code>, <code>max</code>) are checked for visible, non-empty values — <code>required</code> owns emptiness.</p>
           <CodeBlock code={CODE_ZOD} />
           <p>Use code-first Zod for complex refinements and maximum type inference.</p>
           <p>Studio can also generate the schema for you: open Code → React component → check “Include Zod validation”. The generated component carries a readable <code>z.object</code> schema with conditional rules derived from <code>showIf</code>, plus a <code>z.infer</code> type for the submit handler.</p>

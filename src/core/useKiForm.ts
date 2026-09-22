@@ -56,6 +56,9 @@ export function useKiForm<TValues extends FormValues = FormValues>(options: UseK
 
       if (field.required && isEmptyValue(field, values[field.name])) {
         newErrors[field.name] = `${field.label} is required`
+      } else {
+        const constraint = constraintError(field, values[field.name])
+        if (constraint) newErrors[field.name] = constraint
       }
     }
 
@@ -85,7 +88,10 @@ export function useKiForm<TValues extends FormValues = FormValues>(options: UseK
     let error: string | undefined
     if (field.required && isEmptyValue(field, values[field.name])) {
       error = `${field.label} is required`
-    } else if (schema?.safeParse) {
+    } else {
+      error = constraintError(field, values[field.name]) ?? undefined
+    }
+    if (!error && schema?.safeParse) {
       const result = schema.safeParse(values)
       if (!result.success) {
         const issues = result.error.errors ?? result.error.issues ?? []
@@ -139,4 +145,35 @@ function isEmptyValue(field: Field, value: unknown): boolean {
   if (field.type === "checkbox") return value !== true
   if (field.type === "number") return value === "" || value === undefined || value === null || Number.isNaN(value)
   return value === "" || value === undefined || value === null || (typeof value === "string" && value.trim() === "")
+}
+
+/**
+ * Field-constraint check (added in 2.4.0): length / pattern for text-like
+ * values, range for numbers. Empty values are skipped — `required` owns
+ * emptiness — and hidden fields never reach this helper.
+ */
+export function constraintError(field: Field, value: unknown): string | undefined {
+  const label = typeof field.label === "string" ? field.label : field.name
+  if (typeof value === "string" && value !== "") {
+    if (field.minLength !== undefined && value.length < field.minLength) {
+      return `${label} must be at least ${field.minLength} characters`
+    }
+    if (field.maxLength !== undefined && value.length > field.maxLength) {
+      return `${label} must be at most ${field.maxLength} characters`
+    }
+    if (field.pattern !== undefined) {
+      try {
+        if (!new RegExp(field.pattern).test(value)) return `${label} format is invalid`
+      } catch {
+        // Invalid patterns are rejected by the schema validator; never crash here.
+      }
+    }
+    return undefined
+  }
+  if (typeof value === "number" && !Number.isNaN(value)) {
+    if (field.min !== undefined && value < field.min) return `${label} must be at least ${field.min}`
+    if (field.max !== undefined && value > field.max) return `${label} must be at most ${field.max}`
+    return undefined
+  }
+  return undefined
 }

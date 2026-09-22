@@ -17,10 +17,12 @@ import { FormCanvas, FieldPreview } from "./components/FormCanvas"
 import { BlocksPanel } from "./components/BlocksPanel"
 import { StylePanel } from "./components/StylePanel"
 import { FormPanel } from "./components/FormPanel"
+import { AiPanel } from "./components/AiPanel"
 import { Inspector } from "./components/Inspector"
 import { TemplatesModal, DocsModal, CodeModal, PreviewOverlay, SheetsModal } from "./components/Modals"
 import { validateSchema } from "./lib/schema"
 import { toReactSnippet } from "./lib/export"
+import { PREVIEW_SCOPE_VALUE, scopeCustomCss, validateCustomCss } from "./lib/css"
 import { TEMPLATES } from "./lib/templates"
 import type { ShadcnPreset } from "./lib/shadcn-presets"
 import { useMinWidth } from "./lib/use-media-query"
@@ -52,6 +54,7 @@ import {
   Blocks,
   Paintbrush,
   Settings2,
+  Sparkles,
   MoreHorizontal,
   PanelLeftClose,
   PanelLeftOpen,
@@ -63,8 +66,8 @@ import {
 } from "lucide-react"
 
 type Variant = "classic" | "conversational"
-type Doc = { title: string; fields: Field[]; theme: KiTheme; variant: Variant; presetId?: string; endpoint?: string }
-type Panel = "blocks" | "style" | "form"
+type Doc = { title: string; fields: Field[]; theme: KiTheme; variant: Variant; presetId?: string; endpoint?: string; customCss?: string }
+type Panel = "blocks" | "style" | "form" | "ai"
 type DeviceMode = "desktop" | "tablet" | "mobile"
 
 const STORAGE_KEY = "ki-studio-doc-v2"
@@ -95,6 +98,7 @@ function loadDoc(): Doc {
     if (parsed === null || typeof parsed !== "object") return fallback()
     const p = parsed as Record<string, unknown>
     const r = validateSchema(p.fields)
+    const css = typeof p.customCss === "string" && validateCustomCss(p.customCss).ok ? p.customCss : undefined
     return {
       title: typeof p.title === "string" ? p.title : "Untitled form",
       fields: r.ok ? r.fields : fallback().fields,
@@ -102,6 +106,7 @@ function loadDoc(): Doc {
       variant: p.variant === "conversational" ? "conversational" : "classic",
       presetId: typeof p.presetId === "string" ? p.presetId : undefined,
       endpoint: typeof p.endpoint === "string" && p.endpoint !== "" ? p.endpoint : undefined,
+      ...(css ? { customCss: css } : {}),
     }
   } catch {
     return fallback()
@@ -399,7 +404,7 @@ export default function App() {
   )
 
   const applyDocument = useCallback(
-    (doc: { title?: string; fields: Field[]; theme: KiTheme; variant: Variant; endpoint?: string }) => {
+    (doc: { title?: string; fields: Field[]; theme: KiTheme; variant: Variant; endpoint?: string; customCss?: string }) => {
       // Imported themes are explicit tokens, so any active preset no longer applies.
       setPreset(null)
       update((d) => ({
@@ -409,6 +414,7 @@ export default function App() {
         theme: doc.theme,
         variant: doc.variant,
         endpoint: doc.endpoint,
+        ...(doc.customCss ? { customCss: doc.customCss } : { customCss: undefined }),
       }))
       setSelected(null)
       toast.success("Document applied successfully")
@@ -523,6 +529,7 @@ export default function App() {
     { id: "blocks", icon: <Blocks className="size-5" />, label: "Blocks" },
     { id: "style", icon: <Paintbrush className="size-5" />, label: "Style" },
     { id: "form", icon: <Settings2 className="size-5" />, label: "Form" },
+    { id: "ai", icon: <Sparkles className="size-5" />, label: "AI" },
   ]
 
   const panelBody = (
@@ -537,6 +544,8 @@ export default function App() {
           onPresetMode={togglePresetMode}
           onTokens={(theme) => update((d) => ({ ...d, theme }), true)}
           onClearPreset={() => setPreset(null)}
+          customCss={doc.customCss ?? ""}
+          onCustomCss={(customCss) => update((d) => ({ ...d, customCss }), true)}
         />
       )}
       {panel === "form" && (
@@ -549,6 +558,9 @@ export default function App() {
           onEndpointChange={(endpoint) => update((d) => ({ ...d, endpoint }), true)}
           onOpenSheets={() => setModal("sheets")}
         />
+      )}
+      {panel === "ai" && (
+        <AiPanel fields={doc.fields} onApplyDocument={applyDocument} />
       )}
     </>
   )
@@ -1015,6 +1027,7 @@ export default function App() {
             {/* Scrollable Canvas Viewport */}
             <div className="flex-1 overflow-auto p-4 sm:p-8 flex justify-center items-start studio-scrollbar">
               <div
+                data-ki-preview={PREVIEW_SCOPE_VALUE}
                 style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}
                 className={
                   "studio-paper w-full rounded-2xl sm:rounded-3xl border border-border bg-card text-foreground transition-all duration-200 " +
@@ -1025,6 +1038,9 @@ export default function App() {
                     : "max-w-2xl")
                 }
               >
+                {doc.customCss && validateCustomCss(doc.customCss).ok && (
+                  <style>{scopeCustomCss(doc.customCss)}</style>
+                )}
                 <FormCanvas
                   fields={doc.fields}
                   theme={doc.theme}
@@ -1083,6 +1099,7 @@ export default function App() {
             theme={doc.theme}
             variant={doc.variant}
             endpoint={doc.endpoint}
+            customCss={doc.customCss}
             onApplyDocument={applyDocument}
             onClose={() => setModal("none")}
           />
@@ -1104,6 +1121,7 @@ export default function App() {
             theme={doc.theme}
             variant={doc.variant}
             endpoint={doc.endpoint}
+            customCss={doc.customCss}
             device={device === "mobile" ? "mobile" : "desktop"}
             onClose={() => setModal("none")}
           />

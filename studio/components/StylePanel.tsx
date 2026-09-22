@@ -1,5 +1,6 @@
 import type { KiTheme } from "../../src/types"
 import { SHADCN_PRESETS, type ShadcnPreset } from "../lib/shadcn-presets"
+import { MAX_CUSTOM_CSS, validateCustomCss } from "../lib/css"
 import { cn } from "../lib/utils"
 import { Check, Sun, Moon, RotateCcw, X } from "lucide-react"
 import { Button } from "./ui/button"
@@ -16,6 +17,8 @@ export type StylePanelProps = {
   onPresetMode: () => void
   onTokens: (theme: KiTheme) => void
   onClearPreset: () => void
+  customCss: string
+  onCustomCss: (css: string) => void
 }
 
 const TOKENS: { key: keyof KiTheme; label: string; kind: "color" | "text"; fallback: string }[] = [
@@ -29,7 +32,7 @@ const TOKENS: { key: keyof KiTheme; label: string; kind: "color" | "text"; fallb
   { key: "fontFamily", label: "Font family", kind: "text", fallback: "inherit" },
 ]
 
-export function StylePanel({ theme, preset, presetDark, onPreset, onPresetMode, onTokens, onClearPreset }: StylePanelProps) {
+export function StylePanel({ theme, preset, presetDark, onPreset, onPresetMode, onTokens, onClearPreset, customCss, onCustomCss }: StylePanelProps) {
   const setColor = (key: keyof KiTheme, value: string) => onTokens({ ...theme, [key]: value })
   const clearToken = (key: keyof KiTheme) => {
     const next = { ...theme }
@@ -149,6 +152,43 @@ export function StylePanel({ theme, preset, presetDark, onPreset, onPresetMode, 
         {(Object.keys(theme).length > 0 || preset) && (
           <Button variant="outline" size="sm" onClick={() => { onPreset(null); onClearPreset() }}>
             <RotateCcw /> Reset all styling
+          </Button>
+        )}
+      </section>
+
+      <Separator />
+
+      {/* ---------- custom CSS ---------- */}
+      <section className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-medium text-muted-foreground">Custom CSS</div>
+          <span className="text-[11px] text-muted-foreground" aria-live="polite">
+            {customCss.length} / {MAX_CUSTOM_CSS}
+          </span>
+        </div>
+        <textarea
+          rows={8}
+          value={customCss}
+          onChange={(e) => onCustomCss(e.target.value)}
+          placeholder={`.my-field {\n  border-color: #ea580c;\n}`}
+          aria-label="Custom CSS"
+          aria-invalid={customCss !== "" && !validateCustomCss(customCss).ok || undefined}
+          spellCheck={false}
+          wrap="off"
+          className="w-full resize-y overflow-auto rounded-md border border-input bg-card p-2.5 font-mono text-xs leading-relaxed text-foreground outline-none focus-visible:border-studio-accent focus-visible:ring-studio-accent/30 focus-visible:ring-[3px]"
+        />
+        {customCss !== "" && !validateCustomCss(customCss).ok && (
+          <p role="alert" className="text-[11px] text-destructive">
+            {(validateCustomCss(customCss) as { ok: false; error: string }).error} — preview paused until fixed.
+          </p>
+        )}
+        <p className="text-[11px] leading-snug text-muted-foreground">
+          Scoped to the preview only — never injected by the ki-forms runtime. Export it separately via
+          Code → CSS and paste it into your app stylesheet.
+        </p>
+        {customCss !== "" && (
+          <Button variant="outline" size="sm" onClick={() => onCustomCss("")} className="self-start">
+            <X /> Clear custom CSS
           </Button>
         )}
       </section>

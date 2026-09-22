@@ -43,6 +43,11 @@ function fieldLiteral(field: Field, warnings: ExportWarning[]): string {
   if (field.options !== undefined) parts.push(`options: ${optionsLiteral(field.options)}`)
   if (field.defaultValue !== undefined) parts.push(`defaultValue: ${literal(field.defaultValue)}`)
   if (field.required) parts.push("required: true")
+  if (field.minLength !== undefined) parts.push(`minLength: ${literal(field.minLength)}`)
+  if (field.maxLength !== undefined) parts.push(`maxLength: ${literal(field.maxLength)}`)
+  if (field.pattern !== undefined) parts.push(`pattern: ${literal(field.pattern)}`)
+  if (field.min !== undefined) parts.push(`min: ${literal(field.min)}`)
+  if (field.max !== undefined) parts.push(`max: ${literal(field.max)}`)
   if (field.helperText !== undefined) parts.push(`helperText: ${literal(field.helperText)}`)
   if (field.className !== undefined) parts.push(`className: ${literal(field.className)}`)
   if (field.showIf) parts.push(showIfLiteral(field))
@@ -114,6 +119,37 @@ function labelOf(field: Field): string {
 }
 
 /**
+ * Constraint refinements mirroring `withConstraints` in src/zod.ts:
+ * empty values pass, non-empty values must satisfy each set constraint.
+ */
+function constraintSource(field: Field): string {
+  const label = labelOf(field)
+  let out = ""
+  const skipEmpty = (check: string, message: string) => {
+    out += `.refine((v) => v === undefined || v === "" || (${check}), { message: ${literal(message)} })`
+  }
+  if (field.minLength !== undefined) {
+    skipEmpty(`typeof v === "string" && v.length >= ${literal(field.minLength)}`, `${label} must be at least ${field.minLength} characters`)
+  }
+  if (field.maxLength !== undefined) {
+    skipEmpty(`typeof v === "string" && v.length <= ${literal(field.maxLength)}`, `${label} must be at most ${field.maxLength} characters`)
+  }
+  if (field.pattern !== undefined) {
+    skipEmpty(
+      `(() => { try { return typeof v === "string" && new RegExp(${literal(field.pattern)}).test(v) } catch { return true } })()`,
+      `${label} format is invalid`,
+    )
+  }
+  if (field.min !== undefined) {
+    skipEmpty(`typeof v === "number" && !Number.isNaN(v) && v >= ${literal(field.min)}`, `${label} must be at least ${field.min}`)
+  }
+  if (field.max !== undefined) {
+    skipEmpty(`typeof v === "number" && !Number.isNaN(v) && v <= ${literal(field.max)}`, `${label} must be at most ${field.max}`)
+  }
+  return out
+}
+
+/**
  * Generate a readable `z.object(...)` source expression from fields.
  * Conditional requiredness comes from `showIf` + `required` — the same
  * source of truth as the runtime and `buildZodSchema`.
@@ -135,6 +171,7 @@ export function buildZodSource(fields: Field[]): string {
       } else {
         base += ".optional()"
       }
+      base += constraintSource(field)
       return `  ${field.name}: ${base},`
     })
     .join("\n")

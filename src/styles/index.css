@@ -45,6 +45,43 @@
   color: var(--ki-error, #dc2626);
 }
 
+/* Visually hidden but announced by screen readers (step announcements). */
+.ki-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Multi-error summary shown above the submit button (classic variant). */
+.ki-error-summary {
+  margin: 12px 0;
+  padding: 10px 12px;
+  font-size: 13px;
+  border: 1px solid var(--ki-error, #dc2626);
+  border-radius: var(--ki-radius, 6px);
+  background: color-mix(in srgb, var(--ki-error, #dc2626) 8%, transparent);
+}
+
+.ki-error-summary strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.ki-error-summary ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.ki-error-summary a {
+  color: inherit;
+}
+
 .ki-submit {
   padding: 8px 14px;
   border: 0;

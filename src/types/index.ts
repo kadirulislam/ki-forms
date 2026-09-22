@@ -49,6 +49,17 @@ export type Field = {
   required?: boolean
   showIf?: ShowIf
 
+  /** Minimum string length for text-like values (added in 2.4.0). */
+  minLength?: number
+  /** Maximum string length for text-like values (added in 2.4.0). */
+  maxLength?: number
+  /** Required regex (new RegExp(pattern)) for text-like values (added in 2.4.0). */
+  pattern?: string
+  /** Minimum numeric value for number fields (added in 2.4.0). */
+  min?: number
+  /** Maximum numeric value for number fields (added in 2.4.0). */
+  max?: number
+
   className?: string
   helperText?: string
   onChange?: (value: unknown, values: Record<string, unknown>) => void

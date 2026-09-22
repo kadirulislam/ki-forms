@@ -58,6 +58,7 @@ export function buildZodSchema(
     } else {
       shape[field.name] = base.optional()
     }
+    shape[field.name] = withConstraints(shape[field.name] as Chainable, field)
   }
 
   let objectSchema = zod.object(shape) as Chainable
@@ -112,6 +113,48 @@ function withRequired(base: Chainable, field: Field) {
     return base.refine?.((v: number) => typeof v === "number" && !Number.isNaN(v), { message: `${label} is required` }) ?? base
   }
   return base.min?.(1, `${label} is required`) ?? base
+}
+
+/**
+ * Length / pattern / range checks (added in 2.4.0). Empty values always pass —
+ * `required` (or the conditional superRefine) owns emptiness — mirroring the
+ * runtime `constraintError` semantics for optional and hidden-skipped fields.
+ */
+function withConstraints(base: Chainable, field: Field): Chainable {
+  const label = typeof field.label === "string" ? field.label : field.name
+  let out = base
+  const skipEmpty = (check: (v: never) => boolean, message: string) => {
+    out = out.refine?.((v: never) => v === undefined || v === "" || check(v), { message }) ?? out
+  }
+  if (field.minLength !== undefined) {
+    const n = field.minLength
+    skipEmpty((v) => typeof v === "string" && (v as string).length >= n, `${label} must be at least ${n} characters`)
+  }
+  if (field.maxLength !== undefined) {
+    const n = field.maxLength
+    skipEmpty((v) => typeof v === "string" && (v as string).length <= n, `${label} must be at most ${n} characters`)
+  }
+  if (field.pattern !== undefined) {
+    const source = field.pattern
+    skipEmpty((v) => {
+      if (typeof v !== "string") return false
+      try {
+        return new RegExp(source).test(v as string)
+      } catch {
+        // Invalid patterns are rejected by the schema validator; never block here.
+        return true
+      }
+    }, `${label} format is invalid`)
+  }
+  if (field.min !== undefined) {
+    const n = field.min
+    skipEmpty((v) => typeof v === "number" && !Number.isNaN(v as number) && (v as number) >= n, `${label} must be at least ${n}`)
+  }
+  if (field.max !== undefined) {
+    const n = field.max
+    skipEmpty((v) => typeof v === "number" && !Number.isNaN(v as number) && (v as number) <= n, `${label} must be at most ${n}`)
+  }
+  return out
 }
 
 /** Convenience alias. */

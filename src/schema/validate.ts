@@ -26,6 +26,15 @@ function validShowIf(value: unknown): boolean {
   return hasSingleKey || showIf.all !== undefined || showIf.any !== undefined
 }
 
+function compiles(pattern: string): boolean {
+  try {
+    new RegExp(pattern)
+    return true
+  } catch {
+    return false
+  }
+}
+
 function validateFieldObject(field: Record<string, unknown>, path: string, names: Set<string>, issues: SchemaIssue[]): void {
   if (typeof field.name !== "string" || field.name.trim() === "") issues.push({ path: `${path}.name`, message: "Name is required" })
   else if (names.has(field.name)) issues.push({ path: `${path}.name`, message: `Duplicate field name "${field.name}"` })
@@ -36,6 +45,13 @@ function validateFieldObject(field: Record<string, unknown>, path: string, names
   if (field.required !== undefined && typeof field.required !== "boolean") issues.push({ path: `${path}.required`, message: "Required must be boolean" })
   if (field.helperText !== undefined && typeof field.helperText !== "string") issues.push({ path: `${path}.helperText`, message: "Helper text must be a string" })
   if (field.className !== undefined && typeof field.className !== "string") issues.push({ path: `${path}.className`, message: "className must be a string" })
+  if (field.minLength !== undefined && (!Number.isInteger(field.minLength) || (field.minLength as number) < 0)) issues.push({ path: `${path}.minLength`, message: "minLength must be a non-negative integer" })
+  if (field.maxLength !== undefined && (!Number.isInteger(field.maxLength) || (field.maxLength as number) < 0)) issues.push({ path: `${path}.maxLength`, message: "maxLength must be a non-negative integer" })
+  if (typeof field.minLength === "number" && typeof field.maxLength === "number" && field.minLength > field.maxLength) issues.push({ path: `${path}.maxLength`, message: "maxLength must be >= minLength" })
+  if (field.pattern !== undefined && (typeof field.pattern !== "string" || !compiles(field.pattern))) issues.push({ path: `${path}.pattern`, message: "pattern must be a valid regular expression" })
+  if (field.min !== undefined && (typeof field.min !== "number" || Number.isNaN(field.min))) issues.push({ path: `${path}.min`, message: "min must be a number" })
+  if (field.max !== undefined && (typeof field.max !== "number" || Number.isNaN(field.max))) issues.push({ path: `${path}.max`, message: "max must be a number" })
+  if (typeof field.min === "number" && typeof field.max === "number" && field.min > field.max) issues.push({ path: `${path}.max`, message: "max must be >= min" })
   if (field.defaultValue !== undefined && (typeof field.defaultValue === "object" || typeof field.defaultValue === "function")) issues.push({ path: `${path}.defaultValue`, message: "defaultValue must be a JSON-serializable primitive" })
   if (field.showIf !== undefined && !validShowIf(field.showIf)) issues.push({ path: `${path}.showIf`, message: "Invalid condition" })
   if (field.options !== undefined && (!Array.isArray(field.options) || field.options.length === 0 || !field.options.every((option) => typeof option === "string" || (option && typeof option === "object" && typeof (option as { label?: unknown }).label === "string" && typeof (option as { value?: unknown }).value === "string")))) {

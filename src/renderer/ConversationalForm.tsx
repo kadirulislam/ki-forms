@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import type { FormEvent, KeyboardEvent, ReactNode } from "react"
 import { FieldRenderer } from "./FieldRenderer"
 import type { FormApi, KiFormComponents, KiTheme } from "../types"
@@ -40,10 +40,18 @@ export function ConversationalForm({
 
   const [step, setStep] = useState(0)
   const [direction, setDirection] = useState<1 | -1>(1)
-  const inputRef = useRef<HTMLInputElement | HTMLElement | null>(null)
+  const stepRef = useRef<HTMLDivElement | null>(null)
+  const prevStepRef = useRef(0)
+
+  /** Focus the current step's input/select/textarea (failing steps stay actionable). */
+  function focusStepInput() {
+    const el = stepRef.current?.querySelector("input, select, textarea")
+    if (el instanceof HTMLElement) el.focus()
+  }
 
   const clamped = Math.min(step, Math.max(visible.length - 1, 0))
   const current = visible[clamped]
+  const stepLabel = current ? (typeof current.label === "string" ? current.label : current.name) : ""
   const labels = {
     next: stepLabels?.next ?? "Next",
     previous: stepLabels?.previous ?? "Back",
@@ -51,12 +59,21 @@ export function ConversationalForm({
   }
   const isLast = clamped === visible.length - 1
 
+  // Move keyboard + screen-reader focus to the new step's field on navigation
+  // (skipped on first mount so embedding pages keep their focus).
+  useEffect(() => {
+    if (prevStepRef.current !== clamped) {
+      prevStepRef.current = clamped
+      requestAnimationFrame(focusStepInput)
+    }
+  }, [clamped])
+
   function go(delta: 1 | -1) {
     const next = clamped + delta
     if (next < 0) return
     if (delta === 1 && !form.validateField(current.name)) {
       // stay on the failing step; focus the field so the error is actionable
-      requestAnimationFrame(() => inputRef.current?.focus())
+      requestAnimationFrame(focusStepInput)
       return
     }
     setDirection(delta)
@@ -94,11 +111,14 @@ export function ConversationalForm({
         submitButton ?? <button type="submit" className="ki-step-btn primary">{labels.submit}</button>
       ) : (
         <>
-          <div className="ki-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+          <div className="ki-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-label={`Step ${clamped + 1} of ${visible.length}`}>
             <div className="ki-progress-bar" style={{ width: `${progress}%` }} />
           </div>
+          <p className="ki-sr-only" role="status">
+            Step {clamped + 1} of {visible.length}: {stepLabel}
+          </p>
 
-          <div key={current.name} className={`ki-step ${direction === 1 ? "ki-step-fwd" : "ki-step-back"}`}>
+          <div key={current.name} ref={stepRef} className={`ki-step ${direction === 1 ? "ki-step-fwd" : "ki-step-back"}`}>
             <FieldRenderer field={current} form={form} components={components} />
           </div>
 

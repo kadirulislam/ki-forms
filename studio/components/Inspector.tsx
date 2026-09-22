@@ -129,6 +129,8 @@ export function Inspector({ field, otherFields, onChange, onDuplicate, onDelete 
 
       <CheckRow label="Required" checked={!!field.required} onCheckedChange={(v) => onChange({ required: v })} />
 
+      <ValidationSection field={field} onChange={onChange} />
+
       <Separator />
 
       <ConditionEditor field={field} otherFields={otherFields} onChange={onChange} />
@@ -153,6 +155,105 @@ export function Inspector({ field, otherFields, onChange, onDuplicate, onDelete 
 }
 
 type ConditionMode = "always" | "single" | "all" | "any"
+
+const TEXT_LIKE: FieldType[] = ["text", "email", "password", "textarea", "tel", "url"]
+
+function toOptionalNumber(raw: string): number | undefined {
+  if (raw.trim() === "") return undefined
+  const n = Number(raw)
+  return Number.isNaN(n) ? undefined : n
+}
+
+function isValidPattern(pattern: string): boolean {
+  try {
+    new RegExp(pattern)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Length / pattern / range constraints (2.4.0). Shown per field type; empty clears. */
+function ValidationSection({ field, onChange }: { field: Field; onChange: (patch: Partial<Field>) => void }) {
+  const type = field.type || "text"
+  const textLike = TEXT_LIKE.includes(type)
+  const numeric = type === "number"
+  if (!textLike && !numeric) return null
+  const patternInvalid = typeof field.pattern === "string" && field.pattern !== "" && !isValidPattern(field.pattern)
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label className="text-xs text-muted-foreground">Validation</Label>
+      {textLike && (
+        <div className="grid grid-cols-2 gap-1.5">
+          <Row label="Min length" htmlFor="inspector-minlength">
+            <Input
+              id="inspector-minlength"
+              type="number"
+              min={0}
+              step={1}
+              value={field.minLength ?? ""}
+              placeholder="—"
+              onChange={(e) => onChange({ minLength: toOptionalNumber(e.target.value) })}
+              className="h-8"
+            />
+          </Row>
+          <Row label="Max length" htmlFor="inspector-maxlength">
+            <Input
+              id="inspector-maxlength"
+              type="number"
+              min={0}
+              step={1}
+              value={field.maxLength ?? ""}
+              placeholder="—"
+              onChange={(e) => onChange({ maxLength: toOptionalNumber(e.target.value) })}
+              className="h-8"
+            />
+          </Row>
+        </div>
+      )}
+      {textLike && (
+        <Row label="Pattern (regex)" htmlFor="inspector-pattern">
+          <Input
+            id="inspector-pattern"
+            value={field.pattern || ""}
+            placeholder="^[a-z]+$"
+            onChange={(e) => onChange({ pattern: e.target.value === "" ? undefined : e.target.value })}
+            className="h-8 font-mono text-xs"
+            aria-invalid={patternInvalid || undefined}
+          />
+        </Row>
+      )}
+      {patternInvalid && (
+        <p className="text-[11px] text-destructive">Invalid regular expression — imports will reject this field.</p>
+      )}
+      {numeric && (
+        <div className="grid grid-cols-2 gap-1.5">
+          <Row label="Min value" htmlFor="inspector-min">
+            <Input
+              id="inspector-min"
+              type="number"
+              value={field.min ?? ""}
+              placeholder="—"
+              onChange={(e) => onChange({ min: toOptionalNumber(e.target.value) })}
+              className="h-8"
+            />
+          </Row>
+          <Row label="Max value" htmlFor="inspector-max">
+            <Input
+              id="inspector-max"
+              type="number"
+              value={field.max ?? ""}
+              placeholder="—"
+              onChange={(e) => onChange({ max: toOptionalNumber(e.target.value) })}
+              className="h-8"
+            />
+          </Row>
+        </div>
+      )}
+      <p className="text-[11px] text-muted-foreground">Checked for visible, non-empty values — required owns emptiness.</p>
+    </div>
+  )
+}
 
 function getMode(showIf: ShowIf | undefined): ConditionMode {
   if (!showIf) return "always"

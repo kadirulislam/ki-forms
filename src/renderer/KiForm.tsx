@@ -85,6 +85,7 @@ function KiFormView(props: KiFormProps & { form: NonNullable<KiFormProps["form"]
   const form = props.form
   const endpointCtl = useSubmitEndpoint(props)
   const hasEndpoint = typeof props.endpoint === "string" && props.endpoint.length > 0
+  const formEl = useRef<HTMLFormElement | null>(null)
 
   // Controlled-form safety: when the endpoint itself changes (dev previews,
   // schema-driven apps), never show status from the previous endpoint.
@@ -105,7 +106,15 @@ function KiFormView(props: KiFormProps & { form: NonNullable<KiFormProps["form"]
   /** Validate + fire onSubmit + (when endpoint is set) POST {values, meta}. */
   const handleSubmit = (e?: React.FormEvent) => {
     const ok = form.handleSubmitChecked(e)
-    if (!ok || !hasEndpoint) return
+    if (!ok) {
+      // Move keyboard + screen-reader focus to the first invalid field.
+      requestAnimationFrame(() => {
+        const el = formEl.current?.querySelector('[aria-invalid="true"]')
+        if (el instanceof HTMLElement) el.focus()
+      })
+      return
+    }
+    if (!hasEndpoint) return
     endpointCtl.send(form.values)
   }
 
@@ -156,6 +165,7 @@ function KiFormView(props: KiFormProps & { form: NonNullable<KiFormProps["form"]
 
   return (
     <form
+      ref={formEl}
       onSubmit={handleSubmit}
       className={["ki-form", props.className].filter(Boolean).join(" ")}
       style={props.theme ? themeToCssVars(props.theme) : undefined}
@@ -169,8 +179,31 @@ function KiFormView(props: KiFormProps & { form: NonNullable<KiFormProps["form"]
         />
       ))}
 
+      <ErrorSummary form={form} />
       {submitButton}
       {status}
     </form>
+  )
+}
+
+/** Linked multi-error summary for screen-reader + keyboard users (classic variant). */
+function ErrorSummary({ form }: { form: NonNullable<KiFormProps["form"]> }) {
+  const entries = Object.entries(form.errors)
+  if (entries.length < 2) return null
+  return (
+    <div role="alert" className="ki-error-summary">
+      <strong>{entries.length} fields need attention</strong>
+      <ul>
+        {entries.map(([name, message]) => {
+          const field = form.fields.find((f) => f.name === name)
+          const label = field && typeof field.label === "string" ? field.label : name
+          return (
+            <li key={name}>
+              <a href={`#ki-${name}`}>{label}: {message}</a>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
   )
 }
