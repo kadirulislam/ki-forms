@@ -24,21 +24,11 @@ All notable changes to ki-forms are documented here.
 
 ## [Unreleased]
 
-### Fixed
-
-- Schema Studio React exports now generate valid theme object syntax.
-- Theme values and generated field strings are escaped safely, including font stacks containing quoted family names.
-- Schema Studio React exports now include the `ki-forms/styles.css` import.
-- Schema Studio JSON and React export tabs now stay within the viewport on narrow screens.
-- Copying from the Schema JSON tab now uses the current editor contents.
-- Added an in-app Schema Studio guide with quick start, fields, conditions, themes, responses, styling, and export sections.
-- Added Docs actions to the desktop toolbar and mobile overflow menu.
-
 ### Planned
 
-- In-app Schema Studio documentation guide.
-- Field-level `className` editing and export support.
 - Scoped custom CSS preview and separate CSS export.
+- AI prompt box with bring-your-own-key support.
+- Formal JSON Schema specification for editor autocomplete and LLM output.
 
 ## [2.2.0] - 2026-09-21
 
