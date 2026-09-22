@@ -19,6 +19,9 @@ export const DOC_PAGES: DocPage[] = [
   { route: "docs/export", id: "export", title: "React export", eyebrow: "Own the code", description: "Deterministic generated components." },
   { route: "docs/endpoints", id: "endpoints", title: "Endpoint submissions", eyebrow: "Collect responses", description: "Public URLs and server proxies." },
   { route: "docs/styling", id: "styling", title: "Styling and themes", eyebrow: "Visual system", description: "Tokens and field classes." },
+  { route: "docs/custom-css", id: "custom-css", title: "Custom CSS", eyebrow: "Scoped preview", description: "Style-panel CSS with scoped export." },
+  { route: "docs/ai", id: "ai", title: "AI generation", eyebrow: "Bring your own key", description: "Describe the form, review the schema." },
+  { route: "docs/json-schema", id: "json-schema", title: "Formal JSON Schema", eyebrow: "Editor + LLM contract", description: "$schema autocomplete and validation." },
   { route: "docs/accessibility", id: "accessibility", title: "Accessibility", eyebrow: "Inclusive forms", description: "Labels, errors, and focus." },
   { route: "docs/limitations", id: "limitations", title: "Limitations and roadmap", eyebrow: "Focused scope", description: "What is deferred and why." },
   { route: "playground", id: "playground", title: "Playground", eyebrow: "Live examples", description: "Real KiForm renders with submitted values." },
@@ -92,3 +95,19 @@ export const CODE_THEME = `<KiForm
   fields={fields}
   theme={{ accentColor: "#4f46e5", radius: "10px" }}
 />`
+
+export const CODE_CUSTOM_CSS = `[data-ki-preview="studio"] .ki-field input {
+  border-radius: 10px;
+}`
+
+export const CODE_JSON_SCHEMA = `{
+  "$schema": "ki-forms/schema.json",
+  "version": 1,
+  "fields": [
+    { "name": "email", "type": "email", "required": true }
+  ]
+}`
+
+export const CODE_AI_PROMPT = `A waitlist form: work email (required), company,
+team size select (1-10, 11-50, 51+), and a referral
+source textarea.`

@@ -15,7 +15,7 @@ Stop wiring forms manually. Define them as data.
 > with live preview, then copy the schema JSON or a ready-to-paste React component.
 >
 > **Documentation** — the full guide: schema reference, conditions, TypeScript,
-> Zod, Studio workflow, and endpoint security.
+> Zod, Studio workflow, AI generation, custom CSS, formal JSON Schema, and endpoint security.
 
 ---
 
@@ -377,6 +377,9 @@ const form = useKiForm({
 - JSON-based form builder  
 - Conditional fields + AND/OR groups (single source of truth)  
 - Field constraints (length, pattern, numeric range)
+- BYOK AI schema authoring (session-only key, proposal review)
+- Scoped custom CSS (preview + separate export, runtime never injects)
+- Formal JSON Schema (`ki-forms/schema.json`, draft-07)
 - Smart defaults  
 - Theme tokens (CSS variables)  
 - Type-safe values via `InferFormValues`  
@@ -418,6 +421,54 @@ New props: `endpoint`, `method` (default `POST`), `headers`, `submitLabel`, `sub
 > ⚠️ **Security boundary** — the endpoint URL is public (submissions happen in
 > the browser) and must never contain secrets. For private webhooks or API keys,
 > submit to your own server and let the server forward the request.
+
+---
+
+## 🤖 AI Generation (BYOK)
+
+Describe the form in the Studio AI panel, review the proposed schema, then
+apply it to the canvas. Any OpenAI-compatible `/chat/completions` endpoint
+works (defaults: `https://api.openai.com/v1`, model `gpt-4o-mini`).
+
+- The key lives in `sessionStorage` only — never the document, localStorage,
+  or share links. Requests go straight from your browser to the provider.
+- Model output is validated with the canonical importer — failures show
+  path-specific errors and nothing is applied.
+- Applying over a non-empty canvas asks for confirmation.
+
+---
+
+## 🎨 Custom CSS (Scoped)
+
+Write document-level CSS in the Studio Style panel. The canvas and Preview
+render it scoped under `[data-ki-preview="studio"]`, so Studio chrome is
+untouched. The ki-forms runtime never injects CSS.
+
+- Export via Code → CSS (copy or download `form.css`) and own it in your app
+  stylesheet.
+- Guards: 20,000-character cap; `</style>`, `</script>`, and HTML comments
+  are rejected, never applied. Imports carry custom CSS with the document.
+
+---
+
+## 📐 Formal JSON Schema
+
+A draft-07 schema ships as `ki-forms/schema.json` and mirrors the canonical
+TypeScript validator (which stays canonical for edge cases like duplicate
+names and regex compilability):
+
+```json
+{
+  "$schema": "ki-forms/schema.json",
+  "version": 1,
+  "fields": [
+    { "name": "email", "type": "email", "required": true }
+  ]
+}
+```
+
+Add `"$schema": "ki-forms/schema.json"` at the document top level for editor
+autocomplete and LLM output validation — imports ignore the key.
 
 ---
 

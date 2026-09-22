@@ -13,6 +13,9 @@ import {
   CODE_ZOD,
   CODE_ENDPOINT,
   CODE_THEME,
+  CODE_CUSTOM_CSS,
+  CODE_JSON_SCHEMA,
+  CODE_AI_PROMPT,
 } from "./lib/docs-content"
 import "./docs.css"
 
@@ -171,6 +174,34 @@ function renderPage(route: string) {
           <p>Import the built-in stylesheet and override visual tokens with the theme prop.</p>
           <CodeBlock code={CODE_THEME} />
           <LiveDemo fields={EXAMPLE_STYLED} />
+          <p>For one-off visual tweaks, Studio offers scoped <a className="text-link" href="#/docs/custom-css">custom CSS</a> that previews live and exports as a separate artifact.</p>
+        </PageShell>
+      )
+    case "docs/custom-css":
+      return (
+        <PageShell eyebrow="Scoped preview" title="Custom CSS">
+          <p>Write document-level CSS in the Studio Style panel. The canvas and Preview render it scoped under <code>[data-ki-preview=&quot;studio&quot;]</code>, so Studio chrome is never affected. The ki-forms runtime never injects CSS — the export is a separate artifact your app owns.</p>
+          <CodeBlock code={CODE_CUSTOM_CSS} language="css" />
+          <Callout title="Guards">20,000-character cap; <code>&lt;/style&gt;</code>, <code>&lt;/script&gt;</code>, and HTML comments are rejected and never applied. Imports carry custom CSS with the document.</Callout>
+          <p>Export via Code → CSS (copy or download <code>form.css</code>), then paste it into your own stylesheet under your own form container.</p>
+        </PageShell>
+      )
+    case "docs/ai":
+      return (
+        <PageShell eyebrow="Bring your own key" title="AI generation">
+          <p>Open the AI panel in the Studio left rail, describe the form, and review the proposed schema before anything touches the canvas. AI proposes — you dispose.</p>
+          <CodeBlock code={CODE_AI_PROMPT} language="text" />
+          <p>Any OpenAI-compatible <code>/chat/completions</code> endpoint works (default <code>https://api.openai.com/v1</code>, model <code>gpt-4o-mini</code>). Output is validated with the canonical importer — failures show path-specific errors and nothing is applied. Applying over a non-empty canvas asks for confirmation.</p>
+          <Callout title="Key privacy">The API key lives in <code>sessionStorage</code> only — never the document, localStorage, or share links. Requests go straight from your browser to the provider.</Callout>
+        </PageShell>
+      )
+    case "docs/json-schema":
+      return (
+        <PageShell eyebrow="Editor + LLM contract" title="Formal JSON Schema">
+          <p>ki-forms ships a draft-07 JSON Schema as <code>ki-forms/schema.json</code>, mirroring the canonical TypeScript validator. It backs editor autocomplete and the AI prompt contract.</p>
+          <CodeBlock code={CODE_JSON_SCHEMA} language="json" />
+          <p>Add <code>&quot;$schema&quot;: &quot;ki-forms/schema.json&quot;</code> at the document top level for autocomplete and LLM output validation — imports ignore the key.</p>
+          <Callout title="Canonical validator">The TypeScript validator stays canonical. Duplicate field names, cross-property range checks, and regex compilability are rejected only by it — see the schema description for the full divergence list.</Callout>
         </PageShell>
       )
     case "docs/accessibility":
