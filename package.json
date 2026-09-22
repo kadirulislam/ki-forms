@@ -1,6 +1,6 @@
 {
   "name": "ki-forms",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Build dynamic React forms from JSON with zero setup.",
   "type": "module",
   "main": "dist/index.js",
