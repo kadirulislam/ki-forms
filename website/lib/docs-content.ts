@@ -111,3 +111,28 @@ export const CODE_JSON_SCHEMA = `{
 export const CODE_AI_PROMPT = `A waitlist form: work email (required), company,
 team size select (1-10, 11-50, 51+), and a referral
 source textarea.`
+
+export const LANDING_SCHEMA = `[
+  { "name": "role", "type": "select", "options": ["User", "Admin"] },
+  {
+    "name": "company",
+    "showIf": { "field": "role", "equals": "Admin" },
+    "required": true
+  }
+]`
+
+export const LANDING_REACT = `import { KiForm } from "ki-forms"
+import "ki-forms/styles.css"
+
+const fields = [
+  { name: "role", type: "select", options: ["User", "Admin"] },
+  {
+    name: "company",
+    showIf: { field: "role", equals: "Admin" },
+    required: true,
+  },
+] as const
+
+export function SignupForm() {
+  return <KiForm fields={fields} onSubmit={save} />
+}`

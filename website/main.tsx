@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react"
 import { createRoot } from "react-dom/client"
-import { CodeBlock, LiveDemo, Callout, PropertyTable, PrevNext } from "./components/DocComponents"
+import { CodeBlock, LiveDemo, Callout, PropertyTable, PrevNext, LandingShowcase } from "./components/DocComponents"
 import {
   DOC_PAGES,
   EXAMPLE_BASIC,
@@ -16,6 +16,8 @@ import {
   CODE_CUSTOM_CSS,
   CODE_JSON_SCHEMA,
   CODE_AI_PROMPT,
+  LANDING_SCHEMA,
+  LANDING_REACT,
 } from "./lib/docs-content"
 import "./docs.css"
 
@@ -55,27 +57,85 @@ function renderPage(route: string) {
   switch (route) {
     case "":
       return (
-        <>
-          <div className="eyebrow">Developer-first React forms</div>
-          <h1>Build forms visually.<br /><em>Export real React.</em></h1>
-          <p className="lead">Use Schema Studio to design a form, export readable TypeScript or JavaScript, and keep ownership of the final implementation.</p>
-          <div className="actions">
-            <a className="button primary" href="#/docs/getting-started">Get started</a>
-            <a className="button" href="./studio/">Open Schema Studio</a>
+        <div className="landing">
+          <div className="landing-hero">
+            <div className="hero-badges">
+              <span>React 18+</span>
+              <span>TypeScript</span>
+              <span>Zod</span>
+              <span>JSON Schema</span>
+            </div>
+            <h1>Build forms visually.<br /><em>Ship real React.</em></h1>
+            <p className="lead">Describe a form with AI or design it in Schema Studio, export clean TypeScript, and keep complete ownership of the code. No hosted runtime, no lock-in, no account required.</p>
+            <div className="actions">
+              <a className="button primary" href="./studio/">Build in Schema Studio</a>
+              <a className="button" href="#/docs/getting-started">Read the docs</a>
+              <a className="button" href="#/playground">Try it live</a>
+            </div>
+            <div className="install-line">
+              <code>npm install ki-forms</code>
+            </div>
+            <p className="hero-pipeline">AI / Studio → portable schema → real React code</p>
           </div>
-          <div className="workflow">
-            <div><b>01</b><strong>Design</strong><span>Build visually in Studio</span></div>
-            <div><b>02</b><strong>Export</strong><span>Copy a real React component</span></div>
-            <div><b>03</b><strong>Own</strong><span>Keep the code in your app</span></div>
-          </div>
-          <section>
-            <div className="section-label">The core idea</div>
-            <h2>One schema, every layer</h2>
-            <p>The same field definition drives rendering, visibility, validation integration, Studio preview, and generated code.</p>
-            <CodeBlock code={CODE_CANONICAL} />
-            <LiveDemo fields={EXAMPLE_CONDITIONAL} />
+          <section className="landing-section">
+            <div className="section-label">How it works</div>
+            <h2>From idea to code you own</h2>
+            <div className="workflow">
+              <div><b>01</b><strong>Describe or design</strong><span>Prompt the BYOK AI panel or drag fields onto the Studio canvas</span></div>
+              <div><b>02</b><strong>Export the schema</strong><span>Copy portable JSON, a React component, Zod validation, or scoped CSS</span></div>
+              <div><b>03</b><strong>Own the implementation</strong><span>Paste it into your app and customize freely — no runtime account</span></div>
+            </div>
           </section>
-        </>
+          <section className="landing-section">
+            <div className="section-label">Live proof</div>
+            <h2>One schema, three views</h2>
+            <p>Pick <b>Admin</b> below — the company field appears and becomes required. Then switch tabs to see the exact schema and the React component behind it.</p>
+            <LandingShowcase fields={EXAMPLE_CONDITIONAL} schemaCode={LANDING_SCHEMA} reactCode={LANDING_REACT} />
+          </section>
+          <section className="landing-section">
+            <div className="section-label">Features</div>
+            <h2>Everything a JSON form needs</h2>
+            <div className="feature-grid">
+              <a href="#/docs/ai"><strong>🤖 AI schema generation</strong><span>Describe the form; review the proposal before it touches the canvas.</span></a>
+              <a href="#/docs/conditions"><strong>🔀 Conditional fields</strong><span><code>showIf</code> with AND/OR groups — one source of truth.</span></a>
+              <a href="#/docs/zod"><strong>✅ Zod validation</strong><span>Config-first adapter plus readable generated schemas.</span></a>
+              <a href="#/docs/typescript"><strong>🔷 Type-safe values</strong><span>Infer submit shapes from static field definitions.</span></a>
+              <a href="#/docs/styling"><strong>🎨 Themes + scoped CSS</strong><span>Token props plus a scoped CSS export the runtime never injects.</span></a>
+              <a href="#/docs/endpoints"><strong>📥 Endpoint submissions</strong><span>POST JSON anywhere, including Google Sheets via Apps Script.</span></a>
+              <a href="#/docs/json-schema"><strong>📐 Formal JSON Schema</strong><span>Editor autocomplete and an LLM output contract.</span></a>
+              <a href="#/docs/accessibility"><strong>♿ Accessible by default</strong><span>Label wiring, error alerts, focus-first-error, step announcements.</span></a>
+            </div>
+          </section>
+          <section className="landing-section">
+            <div className="section-label">Ownership</div>
+            <h2>Your code, not our dashboard</h2>
+            <div className="table compare" role="table" aria-label="Ownership comparison">
+              <div><b>Typical form builder</b><b>ki-forms</b></div>
+              <div><span>Hosted runtime</span><span>Your React app</span></div>
+              <div><span>Proprietary definition</span><span>Portable JSON</span></div>
+              <div><span>Locked-in styling</span><span>Theme + CSS you own</span></div>
+              <div><span>Limited export</span><span>Readable source export</span></div>
+              <div><span>Account required</span><span>No account required</span></div>
+            </div>
+          </section>
+          <section className="landing-section">
+            <div className="section-label">AI, on your terms</div>
+            <h2>AI-assisted, not AI-dependent</h2>
+            <p>Bring your own key to any OpenAI-compatible endpoint. The key stays in session storage, output is validated before anything is applied, and the core library works fully without AI.</p>
+            <div className="actions">
+              <a className="button" href="#/docs/ai">How AI generation works</a>
+              <a className="button primary" href="./studio/">Try the AI panel</a>
+            </div>
+          </section>
+          <section className="landing-section landing-cta">
+            <h2>Start with a schema. Finish with code you own.</h2>
+            <div className="actions">
+              <a className="button primary" href="./studio/">Open Schema Studio</a>
+              <a className="button" href="#/docs/getting-started">Install ki-forms</a>
+              <a className="button" href="#/docs/limitations">Read the scope</a>
+            </div>
+          </section>
+        </div>
       )
     case "docs/getting-started":
       return (
