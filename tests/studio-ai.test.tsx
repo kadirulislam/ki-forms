@@ -4,6 +4,7 @@ import {
   AI_KEY_SESSION_KEY,
   buildSystemPrompt,
   buildUserPrompt,
+  completionsUrl,
   extractJson,
   generateSchema,
   saveAiKey,
@@ -150,5 +151,43 @@ describe("AI schema authoring (2.5.0)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Generate schema" }))
     await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy())
     expect(screen.queryByText(/Proposed schema/)).toBeNull()
+  })
+
+  it("normalizes the completions URL", () => {
+    expect(completionsUrl("https://api.openai.com/v1")).toBe("https://api.openai.com/v1/chat/completions")
+    expect(completionsUrl("https://api.openai.com/v1/")).toBe("https://api.openai.com/v1/chat/completions")
+    expect(completionsUrl("  https://x.example/api  ")).toBe("https://x.example/api/chat/completions")
+    expect(completionsUrl("https://x.example/api/chat/completions")).toBe("https://x.example/api/chat/completions")
+  })
+
+  it("rejects non-http endpoints before fetching", async () => {
+    const fetchMock = vi.fn()
+    const result = await generateSchema({
+      endpoint: "ftp://x.example",
+      apiKey: "k",
+      model: "m",
+      systemPrompt: "s",
+      userPrompt: "u",
+      fetchImpl: fetchMock as unknown as typeof fetch,
+    })
+    expect(result.ok).toBe(false)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("explains 404s with the called URL and path hints", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 404, json: async () => ({}) })
+    const result = await generateSchema({
+      endpoint: "https://api.openai.com",
+      apiKey: "k",
+      model: "m",
+      systemPrompt: "s",
+      userPrompt: "u",
+      fetchImpl: fetchMock as unknown as typeof fetch,
+    })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toContain("404")
+      expect(result.error).toContain("https://api.openai.com/chat/completions")
+    }
   })
 })

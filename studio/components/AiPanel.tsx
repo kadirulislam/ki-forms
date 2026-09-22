@@ -4,6 +4,7 @@ import {
   AI_PROMPT_EXAMPLES,
   buildSystemPrompt,
   buildUserPrompt,
+  completionsUrl,
   generateSchema,
   loadAiSettings,
   saveAiEndpoint,
@@ -157,6 +158,9 @@ export function AiPanel({ fields, onApplyDocument }: AiPanelProps) {
             placeholder="https://api.openai.com/v1"
             className="h-8 font-mono text-xs"
           />
+          <p className="text-[11px] text-muted-foreground">
+            Requests go to <code className="font-mono">{/^https?:\/\//i.test(endpoint.trim()) ? completionsUrl(endpoint) : "…"}</code>
+          </p>
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="ai-model" className="text-xs text-muted-foreground">Model</Label>

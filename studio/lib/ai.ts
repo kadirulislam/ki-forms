@@ -117,26 +117,33 @@ export function saveAiEndpoint(endpoint: string, model: string): void {
   }
 }
 
-function completionsUrl(endpoint: string): string {
-  const base = endpoint.replace(/\/+$/, "")
+export function completionsUrl(endpoint: string): string {
+  const base = endpoint.trim().replace(/\/+$/, "")
   return base.endsWith("/chat/completions") ? base : `${base}/chat/completions`
 }
 
 export async function generateSchema(options: AiGenerateOptions): Promise<AiGenerateResult> {
-  const { endpoint, apiKey, model, systemPrompt, userPrompt } = options
+  const { apiKey } = options
+  const endpoint = options.endpoint.trim()
+  const model = options.model.trim()
+  const { systemPrompt, userPrompt } = options
   const fetchImpl = options.fetchImpl ?? fetch
+  if (!/^https?:\/\//i.test(endpoint)) {
+    return { ok: false, error: "Endpoint must start with http:// or https:// — e.g. https://api.openai.com/v1." }
+  }
   if (!apiKey) return { ok: false, error: "Missing API key — paste a session-only key first." }
-  if (!model.trim()) return { ok: false, error: "Missing model name." }
+  if (!model) return { ok: false, error: "Missing model name." }
+  const url = completionsUrl(endpoint)
   let response: Response
   try {
-    response = await fetchImpl(completionsUrl(endpoint), {
+    response = await fetchImpl(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: model.trim(),
+        model,
         temperature: 0.2,
         messages: [
           { role: "system", content: systemPrompt },
@@ -145,7 +152,7 @@ export async function generateSchema(options: AiGenerateOptions): Promise<AiGene
       }),
     })
   } catch (err) {
-    return { ok: false, error: `Request failed — ${(err as Error).message}` }
+    return { ok: false, error: `Request failed — ${(err as Error).message}. Check the endpoint URL, your network connection, and any adblocker, VPN, or CORS restrictions.` }
   }
   if (!response.ok) {
     let detail = ""
@@ -155,6 +162,9 @@ export async function generateSchema(options: AiGenerateOptions): Promise<AiGene
       if (typeof msg === "string" && msg) detail = `: ${msg.slice(0, 200)}`
     } catch {
       // fall through to status-only error
+    }
+    if (response.status === 404) {
+      return { ok: false, error: `Provider returned 404 for ${url} — the path looks wrong. OpenAI needs https://api.openai.com/v1, OpenRouter needs https://openrouter.ai/api/v1.${detail}` }
     }
     return { ok: false, error: `Provider returned ${response.status}${detail}` }
   }
