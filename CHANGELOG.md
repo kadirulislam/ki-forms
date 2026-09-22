@@ -24,6 +24,12 @@ All notable changes to ki-forms are documented here.
 
 ## [Unreleased]
 
+### Planned
+
+- CLI scaffolding, MCP tooling, and shareable schema links (distribution).
+
+## [2.4.0] - 2026-09-22
+
 ### Added
 
 - Shared Studio modal primitives (`StudioModal`, copy/code-editor/validation/confirm building blocks) with focus restoration and consistent mobile sizing; Code modal renamed to Code & Schema with live all-errors validation, import previews, Reset/Download actions, export Settings (TS/JS, theme, endpoint, Zod, schema marker), and confirm-before-replace.
@@ -33,10 +39,6 @@ All notable changes to ki-forms are documented here.
 - Field constraints (`minLength`, `maxLength`, `pattern`, `min`, `max`) across schema, runtime, Zod adapter + readable export, JSON Schema, Studio Inspector, import/export, and docs.
 - Scoped document-level custom CSS: Style-panel editor, `[data-ki-preview]` scoped canvas + Preview rendering, separate CSS export tab, document import support with breakout/size guards. The core runtime never injects CSS.
 - BYOK AI schema authoring panel: OpenAI-compatible endpoint, session-only key storage, validated proposal preview with accept/discard and confirm-before-replace.
-
-### Planned
-
-- CLI scaffolding, MCP tooling, and shareable schema links (distribution).
 
 ## [2.2.0] - 2026-09-21
 
