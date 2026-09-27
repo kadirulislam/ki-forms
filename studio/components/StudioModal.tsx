@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog"
+import { TabsTrigger } from "./ui/tabs"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
 import { cn } from "../lib/utils"
-import { Check, Copy } from "lucide-react"
+import { Check, Copy, type LucideIcon } from "lucide-react"
 
 /**
  * Shared Studio modal primitives (P2.4.0 foundation).
@@ -71,11 +72,15 @@ export function StudioModal({ onClose, title, description, hideHeaderText = fals
       <DialogContent
         data-testid={testId}
         className={cn(
-          "flex min-w-0 max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-h-[85vh]",
+          "flex min-w-0 max-h-[calc(100dvh-1.5rem)] w-full max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden p-0",
+          // Never taller than the viewport: `sm:` is a width breakpoint, so a
+          // landscape phone would otherwise get an 85vh box on a 375px-tall screen.
+          "sm:max-h-[min(85dvh,calc(100dvh-2rem))]",
           SIZE_CLASSES[size],
         )}
       >
-        <DialogHeader className={cn("shrink-0 border-b p-4", hideHeaderText && "sr-only")}>
+        {/* pr-10 keeps long titles clear of the absolute close button. */}
+        <DialogHeader className={cn("shrink-0 border-b p-4 pr-10", hideHeaderText && "sr-only")}>
           <DialogTitle className="text-base">{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
@@ -147,6 +152,61 @@ export function StudioCopyButton({ getText, label = "copy", copiedLabel = "copie
   )
 }
 
+/**
+ * Compact modal toolbar button.
+ *
+ * The Code & Schema toolbar carries up to four actions. At phone widths their
+ * full labels overflowed the dialog, and because the dialog is `overflow-hidden`
+ * the trailing buttons were clipped away and unreachable. Labels collapse to
+ * icons below `sm`.
+ *
+ * `aria-label` pins the accessible name at every width. It has to be an
+ * attribute rather than a visually-hidden span: jsdom does not apply Tailwind
+ * classes, so `hidden sm:inline` spans would both render *and* be announced,
+ * producing a doubled name like "ResetReset" in tests.
+ */
+export type StudioToolbarButtonProps = {
+  label: string
+  icon: LucideIcon
+  onClick?: () => void
+  variant?: "default" | "outline" | "secondary" | "ghost"
+  disabled?: boolean
+}
+
+export function StudioToolbarButton({ label, icon: Icon, onClick, variant = "outline", disabled }: StudioToolbarButtonProps) {
+  return (
+    <Button variant={variant} size="sm" onClick={onClick} disabled={disabled} aria-label={label} title={label}>
+      <Icon className="size-3.5" />
+      <span className="hidden sm:inline">{label}</span>
+    </Button>
+  )
+}
+
+/**
+ * Tab trigger that stays legible on narrow viewports.
+ *
+ * `TabsList` is `inline-flex w-fit` with `whitespace-nowrap` triggers, so five
+ * labelled tabs (~480px) overflowed a 343px-wide dialog. The icon is dropped
+ * below `sm` and the label is shortened so all five fit; the full label stays
+ * in the accessible name and the tooltip.
+ */
+export type StudioTabProps = {
+  value: string
+  label: string
+  shortLabel?: string
+  icon?: LucideIcon
+}
+
+export function StudioTab({ value, label, shortLabel, icon: Icon }: StudioTabProps) {
+  return (
+    <TabsTrigger value={value} aria-label={label} title={label} className="gap-1 px-2 sm:gap-1.5 sm:px-3">
+      {Icon ? <Icon className="hidden size-3.5 sm:block" /> : null}
+      <span className="sm:hidden">{shortLabel ?? label}</span>
+      <span className="hidden sm:inline">{label}</span>
+    </TabsTrigger>
+  )
+}
+
 export type CodeEditorProps = {
   value: string
   onChange?: (value: string) => void
@@ -157,14 +217,33 @@ export type CodeEditorProps = {
   testId?: string
 }
 
-export function CodeEditor({ value, onChange, label, placeholder, readOnly = false, minHeight = 240, testId }: CodeEditorProps) {
+/**
+ * Viewport-relative editor sizing.
+ *
+ * A fixed `min-h-[240px]` overflowed short viewports (landscape phones) and a
+ * bare `flex-1` collapsed inside the scrollable tab panes. Clamping to `dvh`
+ * keeps the editor usable on a phone and bounded on a desktop modal, and the
+ * surrounding pane scrolls so the hints below stay reachable.
+ *
+ * `grow` (not `flex-1`) is deliberate: `flex-1` sets `flex-basis: 0`, which
+ * discards the `height` above and squashed the editor to ~65px. `grow` keeps
+ * the clamped height as the basis, expands into spare space on tall windows,
+ * and `min-h-[8rem]` stops it collapsing on short ones.
+ */
+const EDITOR_SIZE = "h-[clamp(11rem,38dvh,24rem)] max-h-[60dvh] min-h-[8rem] grow"
+
+export function CodeEditor({ value, onChange, label, placeholder, readOnly = false, minHeight, testId }: CodeEditorProps) {
+  const style = minHeight === undefined ? undefined : { minHeight }
   if (readOnly) {
     return (
       <pre
         aria-label={label}
         data-testid={testId}
-        className="min-h-0 min-w-0 max-w-full flex-1 overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-xs leading-relaxed"
-        style={{ minHeight }}
+        className={cn(
+          "min-w-0 w-full max-w-full overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-xs leading-relaxed",
+          EDITOR_SIZE,
+        )}
+        style={style}
       >
         {value}
       </pre>
@@ -174,12 +253,15 @@ export function CodeEditor({ value, onChange, label, placeholder, readOnly = fal
     <textarea
       aria-label={label}
       data-testid={testId}
-      className="min-h-[240px] min-w-0 w-full max-w-full flex-1 resize-none overflow-auto rounded-md border border-input bg-card p-3 font-mono text-xs leading-relaxed text-foreground outline-none focus-visible:border-studio-accent focus-visible:ring-studio-accent/30 focus-visible:ring-[3px]"
+      className={cn(
+        "min-w-0 w-full max-w-full resize-none overflow-auto rounded-md border border-input bg-card p-3 font-mono text-xs leading-relaxed text-foreground outline-none focus-visible:border-studio-accent focus-visible:ring-studio-accent/30 focus-visible:ring-[3px]",
+        EDITOR_SIZE,
+      )}
       spellCheck={false}
       wrap="off"
       placeholder={placeholder}
       value={value}
-      style={{ minHeight }}
+      style={style}
       onChange={(e) => onChange?.(e.target.value)}
     />
   )

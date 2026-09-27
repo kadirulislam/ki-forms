@@ -6,7 +6,7 @@ import { parseDocumentImport, parseDocumentImportAll, type DocumentImport } from
 import { PREVIEW_SCOPE_VALUE, scopeCustomCss, validateCustomCss } from "../lib/css"
 import { TEMPLATES } from "../lib/templates"
 import { appsScript, diagnoseNoCors } from "../lib/sheets"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs"
+import { Tabs, TabsList, TabsContent } from "./ui/tabs"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
 import { cn } from "../lib/utils"
@@ -20,10 +20,12 @@ import {
   ValidationSummary,
   ConfirmApplyDialog,
   ReadOnlyBadge,
+  StudioTab,
+  StudioToolbarButton,
   useStudioEscape,
   useFocusRestore,
 } from "./StudioModal"
-import { Check, FileJson, FileCode2, BookOpen, ExternalLink } from "lucide-react"
+import { Check, FileJson, FileCode2, BookOpen, ExternalLink, RotateCcw, Download, CheckCheck, ClipboardPaste, Import, Settings2, FileType2 } from "lucide-react"
 
 export { StudioCopyButton as CopyButton }
 export { useStudioEscape as useEscape }
@@ -502,46 +504,32 @@ export function CodeModal({ fields, theme, variant, endpoint, customCss = "", on
       title="Code & Schema"
       description="Export portable schema and React code, or import back into the canvas."
     >
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b p-2">
-        <div className="flex items-center gap-2">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b p-2">
+        <div className="flex min-w-0 items-center gap-2">
           <ReadOnlyBadge label={tab === "json" || tab === "code" ? "editable" : "read-only"} />
           {tab === "react" && warnings.length > 0 && (
             <span className="text-[11px] text-amber-600">{warnings.length} export note{warnings.length > 1 ? "s" : ""}</span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {tab === "json" && (
             <>
-              <Button variant="outline" size="sm" onClick={resetJson}>
-                Reset
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => download("form.schema.json", text, "application/json")}>
-                Download .json
-              </Button>
-              <Button size="sm" onClick={requestApplyJson}>
-                Apply changes
-              </Button>
+              <StudioToolbarButton label="Reset" icon={RotateCcw} onClick={resetJson} />
+              <StudioToolbarButton label="Download .json" icon={Download} onClick={() => download("form.schema.json", text, "application/json")} />
+              <StudioToolbarButton label="Apply changes" icon={CheckCheck} variant="default" onClick={requestApplyJson} />
             </>
           )}
           {tab === "react" && (
-            <Button variant="outline" size="sm" onClick={() => download("MyForm.tsx", shownReact, "text/plain")}>
-              Download .tsx
-            </Button>
+            <StudioToolbarButton label="Download .tsx" icon={Download} onClick={() => download("MyForm.tsx", shownReact, "text/plain")} />
           )}
           {tab === "code" && (
             <>
-              <Button variant="outline" size="sm" onClick={pasteFromClipboard}>
-                Paste from clipboard
-              </Button>
-              <Button size="sm" onClick={requestApplyCode}>
-                Import from code
-              </Button>
+              <StudioToolbarButton label="Paste from clipboard" icon={ClipboardPaste} onClick={pasteFromClipboard} />
+              <StudioToolbarButton label="Import from code" icon={Import} variant="default" onClick={requestApplyCode} />
             </>
           )}
           {tab === "css" && customCss !== "" && (
-            <Button variant="outline" size="sm" onClick={() => download("form.css", customCss, "text/css")}>
-              Download .css
-            </Button>
+            <StudioToolbarButton label="Download .css" icon={Download} onClick={() => download("form.css", customCss, "text/css")} />
           )}
           {(tab === "json" || tab === "react" || tab === "css") && (
             <StudioCopyButton getText={() => (tab === "json" ? text : tab === "react" ? shownReact : customCss)} />
@@ -550,23 +538,21 @@ export function CodeModal({ fields, theme, variant, endpoint, customCss = "", on
       </div>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="flex min-h-0 min-w-0 flex-1 flex-col gap-0">
-          <div className="border-b p-2">
-            <TabsList aria-label="Code and schema sections">
-              <TabsTrigger value="json">
-                <FileJson /> Schema JSON
-              </TabsTrigger>
-              <TabsTrigger value="react">
-                <FileCode2 /> React component
-              </TabsTrigger>
-              <TabsTrigger value="code">
-                <FileCode2 /> Import code
-              </TabsTrigger>
-              <TabsTrigger value="css">CSS</TabsTrigger>
-              <TabsTrigger value="settings">Settings</TabsTrigger>
-            </TabsList>
+          <div className="shrink-0 border-b p-2">
+            {/* Horizontal scroll is the safety net if a future tab needs a
+                longer label than the compact one below. */}
+            <div className="-mx-1 overflow-x-auto px-1">
+              <TabsList aria-label="Code and schema sections" className="w-full sm:w-fit">
+                <StudioTab value="json" label="Schema JSON" shortLabel="JSON" icon={FileJson} />
+                <StudioTab value="react" label="React component" shortLabel="React" icon={FileCode2} />
+                <StudioTab value="code" label="Import code" shortLabel="Import" icon={FileCode2} />
+                <StudioTab value="css" label="CSS" shortLabel="CSS" icon={FileType2} />
+                <StudioTab value="settings" label="Settings" shortLabel="Settings" icon={Settings2} />
+              </TabsList>
+            </div>
           </div>
 
-          <TabsContent value="json" className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-4">
+          <TabsContent value="json" className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-y-auto p-3 sm:p-4">
             <ModalSection title="Export · editable schema">
             <CodeEditor label="Schema JSON editor" value={text} onChange={(v) => setText(v)} />
             {liveJson.ok ? (
@@ -584,7 +570,7 @@ export function CodeModal({ fields, theme, variant, endpoint, customCss = "", on
             </ModalSection>
           </TabsContent>
 
-          <TabsContent value="react" className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-4">
+          <TabsContent value="react" className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-y-auto p-3 sm:p-4">
             <ModalSection title="Export · generated component">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
@@ -621,7 +607,7 @@ export function CodeModal({ fields, theme, variant, endpoint, customCss = "", on
             </ModalSection>
           </TabsContent>
 
-          <TabsContent value="code" className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-4">
+          <TabsContent value="code" className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-y-auto p-3 sm:p-4">
             <ModalSection title="Import · from exported code">
             <CodeEditor
               label="Import from code editor"
@@ -630,17 +616,14 @@ export function CodeModal({ fields, theme, variant, endpoint, customCss = "", on
               onChange={(v) => { setCodeText(v); setCodeError(null); setCodeApplied(null) }}
             />
             {liveCode?.ok ? importPreview(liveCode.doc) : liveCode ? <ValidationSummary issues={liveCode.errors.map((message) => ({ message }))} /> : null}
-            <div className="flex items-center gap-2">
-              <Button size="sm" onClick={requestApplyCode}>
-                Import from code
-              </Button>
-              {codeApplied && <span className="text-xs text-emerald-600">✓ {codeApplied}</span>}
-            </div>
+            {/* The primary action lives in the toolbar; repeating it here gave the
+                pane two identical "Import from code" buttons. */}
+            {codeApplied && <p role="status" className="text-xs text-emerald-600">✓ {codeApplied}</p>}
             <ValidationSummary error={codeError} />
             </ModalSection>
           </TabsContent>
 
-          <TabsContent value="css" className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-4">
+          <TabsContent value="css" className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-y-auto p-3 sm:p-4">
             <ModalSection title="Export · custom CSS (separate artifact)">
             {customCss === "" ? (
               <p className="text-xs text-muted-foreground">No custom CSS yet — write it in the Style panel. It previews scoped and exports here, never through the ki-forms runtime.</p>
@@ -653,7 +636,7 @@ export function CodeModal({ fields, theme, variant, endpoint, customCss = "", on
             </ModalSection>
           </TabsContent>
 
-          <TabsContent value="settings" className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-hidden p-4">
+          <TabsContent value="settings" className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto p-3 sm:p-4">
             <ModalSection title="Language">
               <div className="flex gap-2" role="radiogroup" aria-label="Export language">
                 {(["tsx", "jsx"] as const).map((l) => (
