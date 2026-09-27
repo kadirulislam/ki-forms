@@ -62,9 +62,11 @@ export type StudioModalProps = {
   children: ReactNode
   /** Test id for the dialog content. */
   testId?: string
+  /** Extra classes for the dialog panel, e.g. a wider max-width. */
+  className?: string
 }
 
-export function StudioModal({ onClose, title, description, hideHeaderText = false, size = "md", children, testId }: StudioModalProps) {
+export function StudioModal({ onClose, title, description, hideHeaderText = false, size = "md", children, testId, className }: StudioModalProps) {
   useStudioEscape(onClose)
   useFocusRestore()
   return (
@@ -77,6 +79,7 @@ export function StudioModal({ onClose, title, description, hideHeaderText = fals
           // landscape phone would otherwise get an 85vh box on a 375px-tall screen.
           "sm:max-h-[min(85dvh,calc(100dvh-2rem))]",
           SIZE_CLASSES[size],
+          className,
         )}
       >
         {/* pr-10 keeps long titles clear of the absolute close button. */}

@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { DeviceFrame, DEVICE_VIEWPORT_LABEL, type DeviceKind } from "./DeviceFrame"
 import type { Field, KiTheme } from "../../src/types"
 import { KiForm } from "../../src/renderer/KiForm"
 import { toJson, toRoundTripSnippet, importSchemaBlock, exportReact } from "../lib/export"
@@ -22,9 +23,24 @@ import {
   StudioTab,
   StudioToolbarButton,
   useStudioEscape,
-  useFocusRestore,
 } from "./StudioModal"
-import { Check, FileJson, FileCode2, BookOpen, ExternalLink, RotateCcw, Download, CheckCheck, ClipboardPaste, Import, Settings2, FileType2 } from "lucide-react"
+import {
+  Check,
+  FileJson,
+  FileCode2,
+  BookOpen,
+  ExternalLink,
+  RotateCcw,
+  Download,
+  CheckCheck,
+  ClipboardPaste,
+  Import,
+  Settings2,
+  FileType2,
+  Monitor,
+  Tablet,
+  Smartphone,
+} from "lucide-react"
 
 export { StudioCopyButton as CopyButton }
 export { useStudioEscape as useEscape }
@@ -728,68 +744,96 @@ export function SheetsModal({ onConnect, onClose }: SheetsModalProps) {
   )
 }
 
+/** Preview device frames. Matches the canvas DeviceMode so the tablet button
+ *  is no longer a dead end in the preview. */
+export type PreviewDevice = DeviceKind
+
+const DEVICE_BADGE: Record<PreviewDevice, string> = {
+  desktop: "MacBook Pro",
+  tablet: "iPad",
+  mobile: "iPhone",
+}
+
 export type PreviewOverlayProps = {
   fields: Field[]
   theme: KiTheme
   variant: "classic" | "conversational"
   endpoint?: string
   customCss?: string
-  device: "desktop" | "mobile"
+  device: PreviewDevice
+  onDeviceChange?: (device: PreviewDevice) => void
   onClose: () => void
 }
 
-export function PreviewOverlay({ fields, theme, variant, endpoint, customCss, device, onClose }: PreviewOverlayProps) {
-  // Container context for the .ki-row collapse rule. Only the preview wrapper is
-  // a container — the library's own .ki-form deliberately is not.
-  const previewContainerStyle = { containerName: "ki-preview", containerType: "inline-size" } as const
+export function PreviewOverlay({
+  fields,
+  theme,
+  variant,
+  endpoint,
+  customCss,
+  device,
+  onDeviceChange,
+  onClose,
+}: PreviewOverlayProps) {
   const [result, setResult] = useState<string | null>(null)
-  useStudioEscape(onClose)
-  useFocusRestore()
   const scopedCss = customCss && validateCustomCss(customCss).ok ? scopeCustomCss(customCss) : ""
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Form preview" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-6" onClick={onClose}>
-      <div
-        data-ki-preview={PREVIEW_SCOPE_VALUE}
-        className={cn(
-          "flex max-h-full w-full flex-col overflow-hidden rounded-xl border bg-background shadow-2xl",
-          device === "mobile" ? "max-w-[420px]" : "max-w-2xl",
+    <StudioModal
+      size="lg"
+      testId="preview-modal"
+      onClose={onClose}
+      title="Preview"
+      description="The form as your users will see it, inside a device frame."
+      className="sm:max-w-[min(96vw,1180px)]"
+    >
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b p-2">
+        {onDeviceChange && (
+          <div className="flex items-center gap-1" role="group" aria-label="Preview device">
+            {(["desktop", "tablet", "mobile"] as const).map((d) => (
+              <Button
+                key={d}
+                variant={device === d ? "default" : "outline"}
+                size="sm"
+                aria-pressed={device === d}
+                onClick={() => onDeviceChange(d)}
+                className="h-8 gap-1.5 px-2.5 text-xs"
+              >
+                {d === "desktop" ? <Monitor className="size-3.5" /> : d === "tablet" ? <Tablet className="size-3.5" /> : <Smartphone className="size-3.5" />}
+                <span className="hidden sm:inline">{d[0].toUpperCase() + d.slice(1)}</span>
+              </Button>
+            ))}
+          </div>
         )}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {scopedCss !== "" && <style>{scopedCss}</style>}
-        {/* This element is the query container that lets the two-column .ki-row
-            collapse inside a narrow device frame. */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto" style={previewContainerStyle}>
-        <div className="flex h-11 shrink-0 items-center gap-2 overflow-x-auto border-b px-3">
-          <Badge variant="secondary">{device === "mobile" ? "Mobile · 390px" : "Desktop"}</Badge>
-          <Badge variant="secondary">{variant === "conversational" ? "Conversational" : "Classic"}</Badge>
-          {endpoint && <Badge variant="secondary">endpoint ✓</Badge>}
-          {scopedCss !== "" && <Badge variant="secondary">custom CSS ✓</Badge>}
-          <span className="ml-auto hidden text-xs text-muted-foreground sm:inline">
-            This is exactly what your users will see
-          </span>
-          <Button variant="ghost" size="icon-sm" aria-label="Close" onClick={onClose}>
-            ✕
-          </Button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-          <KiForm
-            fields={fields}
-            theme={theme}
-            variant={variant}
-            endpoint={endpoint}
-            onSubmit={(values) => setResult(JSON.stringify(values, null, 2))}
-          />
-          {result && (
-            <div className="mt-4 rounded-lg border p-3">
-              <strong className="text-sm">onSubmit received</strong>
-              <pre className="mt-1 overflow-auto font-mono text-xs">{result}</pre>
-            </div>
-          )}
-        </div>
-        </div>
+        <Badge variant="secondary">{DEVICE_BADGE[device]}</Badge>
+        <span className="text-[11px] text-muted-foreground">{DEVICE_VIEWPORT_LABEL[device]}</span>
+        <Badge variant="secondary">{variant === "conversational" ? "Conversational" : "Classic"}</Badge>
+        {endpoint && <Badge variant="secondary">endpoint ✓</Badge>}
+        {scopedCss !== "" && <Badge variant="secondary">custom CSS ✓</Badge>}
       </div>
-    </div>
+
+      {scopedCss !== "" && <style>{scopedCss}</style>}
+
+      {/* The scoped-CSS wrapper doubles as the flex child. A plain block div here
+          would break the `min-h-0` chain from the dialog down to DeviceFrame, and
+          the frame would overflow the modal instead of being measured against it. */}
+      <div data-ki-preview={PREVIEW_SCOPE_VALUE} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted/40">
+          <DeviceFrame device={device} containerName="ki-preview">
+            <KiForm
+              fields={fields}
+              theme={theme}
+              variant={variant}
+              endpoint={endpoint}
+              onSubmit={(values) => setResult(JSON.stringify(values, null, 2))}
+            />
+            {result && (
+              <div className="mt-4 rounded-lg border p-3">
+                <strong className="text-sm">onSubmit received</strong>
+                <pre className="mt-1 overflow-auto font-mono text-xs">{result}</pre>
+              </div>
+            )}
+          </DeviceFrame>
+      </div>
+    </StudioModal>
   )
 }

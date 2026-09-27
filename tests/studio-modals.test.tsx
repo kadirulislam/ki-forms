@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import { CodeModal, PreviewOverlay, SheetsModal, DocsModal } from "../studio/components/Modals"
 import { StudioCopyButton, ValidationSummary, ConfirmApplyDialog } from "../studio/components/StudioModal"
+import { DEVICE_CONTENT_WIDTH } from "../studio/components/DeviceFrame"
 
 function mockClipboard() {
   const writeText = vi.fn().mockResolvedValue(undefined)
@@ -177,9 +178,81 @@ describe("studio modal primitives", () => {
     expect(screen.getAllByRole("button", { name: "Import from code" })).toHaveLength(1)
   })
 
-  it("preview overlay is labelled as a dialog", () => {
+  it("preview renders inside a labelled device frame on the shared modal", () => {
     render(<PreviewOverlay fields={[{ name: "email" }]} theme={{}} variant="classic" device="desktop" onClose={vi.fn()} />)
-    expect(screen.getByRole("dialog", { name: "Form preview" })).toBeTruthy()
+    expect(screen.getByRole("dialog", { name: /Preview/ })).toBeTruthy()
+    // The frame names the device and its viewport, and the form sits inside it.
+    expect(screen.getAllByText("MacBook Pro").length).toBeGreaterThan(0)
+    expect(screen.getByText("1280 × 800")).toBeTruthy()
+    expect(document.querySelector("[data-ki-preview]")).toBeTruthy()
+    expect(screen.getByLabelText(/email/i)).toBeTruthy()
+  })
+
+  it("preview switches device frames, including tablet", () => {
+    const onDeviceChange = vi.fn()
+    const { rerender } = render(
+      <PreviewOverlay
+        fields={[{ name: "email" }]}
+        theme={{}}
+        variant="classic"
+        device="desktop"
+        onDeviceChange={onDeviceChange}
+        onClose={vi.fn()}
+      />,
+    )
+    fireEvent.click(screen.getByRole("button", { name: /Tablet/ }))
+    expect(onDeviceChange).toHaveBeenCalledWith("tablet")
+
+    // Tablet used to be unreachable: the prop only accepted desktop | mobile.
+    rerender(
+      <PreviewOverlay
+        fields={[{ name: "email" }]}
+        theme={{}}
+        variant="classic"
+        device="tablet"
+        onDeviceChange={onDeviceChange}
+        onClose={vi.fn()}
+      />,
+    )
+    expect(screen.getAllByText("iPad").length).toBeGreaterThan(0)
+    expect(screen.getByText("834 × 1112")).toBeTruthy()
+  })
+
+  it("device frames scale to fit rather than overflowing the modal", () => {
+    // jsdom has no layout, so this asserts the arithmetic that drives the scale:
+    // each frame's measured width must match what its markup actually renders.
+    expect(DEVICE_CONTENT_WIDTH.mobile).toBe(390)
+    expect(DEVICE_CONTENT_WIDTH.tablet).toBe(834)
+    expect(DEVICE_CONTENT_WIDTH.desktop).toBe(1280)
+    for (const device of ["desktop", "tablet", "mobile"] as const) {
+      const { unmount } = render(
+        <PreviewOverlay fields={[{ name: "email" }]} theme={{}} variant="classic" device={device} onClose={vi.fn()} />,
+      )
+      const screen = document.querySelector("[data-device-screen]") as HTMLElement
+      // The screen is the query container and keeps the device's true pixel
+      // width, so the two-column collapse behaves like the real device.
+      expect(getComputedStyle(screen).width).toBe(`${DEVICE_CONTENT_WIDTH[device]}px`)
+      expect(getComputedStyle(screen).containerType).toBe("inline-size")
+      unmount()
+    }
+  })
+
+  it("preview device frame is the query container that collapses two-column rows", () => {
+    render(
+      <PreviewOverlay
+        fields={[{ name: "a", width: "half" }, { name: "b", width: "half" }]}
+        theme={{}}
+        variant="classic"
+        device="mobile"
+        onClose={vi.fn()}
+      />,
+    )
+    // The query container is the device screen, not the library's .ki-form.
+    const screen = document.querySelector('[style*="container-name"]') as HTMLElement | null
+    expect(screen).toBeTruthy()
+    expect(screen!.style.containerType).toBe("inline-size")
+    expect(screen!.style.containerName).toBe("ki-preview")
+    expect((document.querySelector(".ki-form") as HTMLElement | null)?.style.containerType ?? "").toBe("")
   })
 
   it("sheets modal validates the Apps Script URL", () => {

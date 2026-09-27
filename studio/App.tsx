@@ -761,7 +761,8 @@ export default function App() {
                     variant="ghost"
                     size="icon-sm"
                     aria-label={device === "desktop" ? "Mobile width" : "Desktop width"}
-                    onClick={() => setDevice((d) => (d === "desktop" ? "mobile" : "desktop"))}
+                    // Cycles through all three widths, matching the canvas switcher.
+                    onClick={() => setDevice((d) => (d === "desktop" ? "tablet" : d === "tablet" ? "mobile" : "desktop"))}
                   >
                     {device === "desktop" ? <Smartphone /> : <Monitor />}
                   </Button>
@@ -1154,7 +1155,9 @@ export default function App() {
             variant={doc.variant}
             endpoint={doc.endpoint}
             customCss={doc.customCss}
-            device={device === "mobile" ? "mobile" : "desktop"}
+            // All three canvas widths, so the tablet button is no longer a dead end.
+            device={device}
+            onDeviceChange={setDevice}
             onClose={() => setModal("none")}
           />
         )}
