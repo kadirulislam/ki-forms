@@ -15,7 +15,7 @@ import {
 import { useState } from "react"
 import type { FieldType } from "../../src/types"
 import { cn } from "../lib/utils"
-import { Info, Search, Move } from "lucide-react"
+import { Info, Search } from "lucide-react"
 
 /** Modern high-fidelity wireframe thumbnail per field type matching modern design editors.
  *  Exported so the Templates panel can stack the same rows into a form-level preview. */
@@ -199,17 +199,18 @@ function PaletteCard({
       {...listeners}
       onClick={() => onAdd(block.type)}
       className={cn(
-        "group flex h-8 w-full cursor-grab touch-none select-none items-center gap-2 rounded-md border border-transparent px-2",
-        "text-left transition-colors hover:border-border/70 hover:bg-accent/60 active:cursor-grabbing",
-        isDragging && "border-dashed border-studio-accent bg-studio-accent-subtle opacity-50",
+        // A visible border and a real surface, always. The earlier borderless row
+        // was clean but invisible: with a short label and no edge, there was no
+        // cue that the panel held ten discrete targets.
+        "group flex h-8 w-full cursor-grab touch-none select-none items-center gap-1.5 rounded-md border bg-card px-2",
+        "text-left transition-colors hover:border-foreground/25 hover:bg-accent/60 active:cursor-grabbing",
+        isDragging ? "border-dashed border-studio-accent bg-studio-accent-subtle opacity-60" : "border-border",
       )}
     >
-      <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground group-hover:text-foreground" />
-      <span className="truncate text-xs font-medium text-foreground/85">{block.label}</span>
-      <Move
-        aria-hidden="true"
-        className="ml-auto size-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-60"
-      />
+      <Icon aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground group-hover:text-foreground" />
+      <span className="min-w-0 flex-1 truncate text-left text-[11px] font-medium leading-none text-foreground/85">
+        {block.label}
+      </span>
     </button>
   )
 }
@@ -242,14 +243,15 @@ export function BlocksPanel({ onAdd }: BlocksPanelProps) {
         <Search className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/70" />
       </div>
 
-      {/* A single column of rows, not a grid of cards: the same ten types in a
-          third of the height, and the panel stops competing with the canvas. */}
-      <div className="flex flex-col gap-0.5">
+      {/* Two columns of bordered cells. A single column left ~150px of empty
+          space beside every short label; the grid uses that space, and a
+          visible border per cell makes each target obvious. */}
+      <div className="grid grid-cols-2 gap-1.5">
         {visible.map((b) => (
           <PaletteCard key={b.type} block={b} onAdd={onAdd} />
         ))}
         {visible.length === 0 && (
-          <p className="py-6 text-center text-xs text-muted-foreground">No blocks match “{query}”.</p>
+          <p className="col-span-2 py-6 text-center text-xs text-muted-foreground">No blocks match “{query}”.</p>
         )}
       </div>
 

@@ -139,6 +139,7 @@ type SortableFieldCardProps = {
   onDuplicate: () => void
   onDelete: () => void
   onCopyName: () => void
+  onInsert: (type: string, where: "before" | "after") => void
   allFields: Field[]
 }
 
@@ -155,6 +156,7 @@ function SortableFieldCard({
   onDuplicate,
   onDelete,
   onCopyName,
+  onInsert,
   allFields,
 }: SortableFieldCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -274,6 +276,7 @@ function SortableFieldCard({
         onDuplicate={onDuplicate}
         onDelete={onDelete}
         onCopyName={onCopyName}
+        onInsert={onInsert}
       />
     </ContextMenu>
   )
@@ -344,6 +347,7 @@ export type FormCanvasProps = {
   onDuplicate: (index: number) => void
   onDelete: (index: number) => void
   onCopyName: (index: number) => void
+  onInsert: (index: number, type: string, where: "before" | "after") => void
   onPatch: (index: number, patch: Partial<Field>) => void
   onOpenTemplates: () => void
 }
@@ -360,6 +364,7 @@ export function FormCanvas({
   onDuplicate,
   onDelete,
   onCopyName,
+  onInsert,
   onPatch,
   onOpenTemplates,
 }: FormCanvasProps) {
@@ -430,6 +435,7 @@ export function FormCanvas({
                 onDuplicate={() => onDuplicate(i)}
                 onDelete={() => onDelete(i)}
                 onCopyName={() => onCopyName(i)}
+                onInsert={(type, where) => onInsert(i, type, where)}
               />
             ))}
           </SortableContext>

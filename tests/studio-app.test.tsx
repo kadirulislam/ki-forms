@@ -69,19 +69,32 @@ describe("studio app (shadcn rebuild)", () => {
     expect(rail.className).toContain("w-14")
   })
 
-  it("keeps the blocks palette compact enough to leave the canvas the room", () => {
+  it("keeps the blocks palette compact, bordered, and aligned in a small grid", () => {
     render(<App />)
     openDrawer()
+    fireEvent.click(screen.getByRole("button", { name: "Blocks" }))
+
     // Ten block types used to be 130px wireframe cards in a 2-up grid. They are
-    // now 32px rows in one column, so the whole palette plus its hint fits
-    // without the panel needing to scroll on a laptop.
-    const palette = screen.getByRole("button", { name: "Blocks" })
-    fireEvent.click(palette)
-    const rows = ["Text", "Email", "Phone", "Number", "Password", "Message", "Dropdown", "Checkbox", "Date", "Website"]
-    for (const label of rows) {
-      const row = screen.getByRole("button", { name: new RegExp(`^${label}$`, "i") })
-      expect(row.className).toContain("h-8")
+    // now 32px bordered cells, so the whole palette plus its hint fits without
+    // the panel needing to scroll on a laptop.
+    const labels = ["Text", "Email", "Phone", "Number", "Password", "Message", "Dropdown", "Checkbox", "Date", "Website"]
+    for (const label of labels) {
+      const cell = screen.getByRole("button", { name: new RegExp(`^${label}$`, "i") })
+      expect(cell.className, `${label} is not compact`).toContain("h-8")
+      // A visible border and a real surface: borderless rows read as a list of
+      // labels, not as ten discrete targets.
+      expect(cell.className, `${label} has no visible border`).toContain("border-border")
+      expect(cell.className, `${label} has no background`).toContain("bg-card")
+      // Label alignment: the label is left-aligned and truncates rather than
+      // pushing the cell wider.
+      const text = cell.querySelector("span")
+      expect(text?.className, `${label} label is not left-aligned`).toContain("text-left")
+      expect(text?.className, `${label} label cannot truncate`).toContain("truncate")
     }
+
+    // Two columns, not one: a single column left ~150px of dead space per row.
+    const grid = screen.getByRole("button", { name: /^Text$/i }).parentElement
+    expect(grid?.className).toContain("grid-cols-2")
   })
 
   it("keeps the right column docked with no field selected, showing the form", () => {
@@ -147,8 +160,9 @@ describe("studio app (shadcn rebuild)", () => {
    * will open — not even after an explicit Escape. So this is the single
    * jsdom test for the menu: it asserts the full item set and the boundary
    * states in one pass. The mutations each item performs (Duplicate, Delete,
-   * Move) are asserted against real behaviour in headless Chrome instead,
-   * which is also the only place menu positioning can be checked at all.
+   * Move, Insert before/after) are asserted against real behaviour in headless
+   * Chrome instead, which is also the only place menu positioning and submenu
+   * opening can be checked at all.
    */
   it("right-clicking a field offers the editor actions, with bounds marked", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
@@ -169,7 +183,7 @@ describe("studio app (shadcn rebuild)", () => {
       expect(screen.getByRole("menuitem", { name: label })).toBeTruthy()
     }
     // Context-aware: the choices that need a value are submenus, not toggles.
-    for (const submenu of [/^Label$/, /^Width$/, /^Type$/, /Show only when/i]) {
+    for (const submenu of [/^Label$/, /^Width$/, /^Type$/, /Show only when/i, /Insert before/i, /Insert after/i]) {
       expect(screen.getByRole("menuitem", { name: submenu })).toBeTruthy()
     }
     // alpha is the first field, so it cannot move up. Marked disabled rather

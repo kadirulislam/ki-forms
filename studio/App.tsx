@@ -536,6 +536,21 @@ export default function App() {
       .catch(() => toast.error("Clipboard unavailable"))
   }, [])
 
+  /**
+   * Insert a palette field immediately before or after an existing one.
+   *
+   * `addField` already takes an index, so this is only a matter of exposing it:
+   * the palette can only append, which makes "add a field after Full name"
+   * impossible without dragging — and dragging is unavailable on touch and
+   * awkward with a keyboard.
+   */
+  const insertFieldAt = useCallback(
+    (index: number, fieldType: string, where: "before" | "after") => {
+      addField(fieldType, where === "before" ? index : index + 1)
+    },
+    [addField],
+  )
+
   const copyReact = useCallback(() => {
     const d = docRef.current
     const snippet = toReactSnippet("MyForm", d.fields, { theme: d.theme, variant: d.variant, endpoint: d.endpoint })
@@ -1126,6 +1141,7 @@ export default function App() {
                   onDuplicate={duplicateField}
                   onDelete={deleteField}
                   onCopyName={copyFieldName}
+                  onInsert={insertFieldAt}
                   onPatch={patchField}
                   onOpenTemplates={openTemplatesPanel}
                 />

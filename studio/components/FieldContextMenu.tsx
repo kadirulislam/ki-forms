@@ -1,7 +1,9 @@
 import type { Field, FieldType } from "../../src/types"
 import {
   ArrowDown,
+  ArrowDownFromLine,
   ArrowUp,
+  ArrowUpFromLine,
   Check,
   Clipboard,
   Columns2,
@@ -63,6 +65,8 @@ export type FieldContextMenuProps = {
   onDuplicate: () => void
   onDelete: () => void
   onCopyName: () => void
+  /** Insert a new field of `type` immediately before or after this one. */
+  onInsert: (type: string, where: "before" | "after") => void
 }
 
 export function FieldContextMenuContent({
@@ -75,6 +79,7 @@ export function FieldContextMenuContent({
   onDuplicate,
   onDelete,
   onCopyName,
+  onInsert,
 }: FieldContextMenuProps) {
   const currentType = (field.type ?? "text") as FieldType
   const isRequired = field.required === true
@@ -203,6 +208,38 @@ export function FieldContextMenuContent({
               </ContextMenuRadioItem>
             ))}
           </ContextMenuRadioGroup>
+        </ContextMenuSubContent>
+      </ContextMenuSub>
+
+      {/* Insert at a position rather than only appending. The palette always
+          adds to the end, which means dropping a field "after Full name" is
+          impossible without dragging — and dragging is not available to anyone
+          on a touch screen or using a keyboard. */}
+      <ContextMenuSub>
+        <ContextMenuSubTrigger>
+          <ArrowUpFromLine />
+          Insert before
+        </ContextMenuSubTrigger>
+        <ContextMenuSubContent>
+          {TYPE_ORDER.map((type) => (
+            <ContextMenuItem key={type} onSelect={() => onInsert(type, "before")}>
+              {BLOCK_TYPE_LABELS[type] ?? type}
+            </ContextMenuItem>
+          ))}
+        </ContextMenuSubContent>
+      </ContextMenuSub>
+
+      <ContextMenuSub>
+        <ContextMenuSubTrigger>
+          <ArrowDownFromLine />
+          Insert after
+        </ContextMenuSubTrigger>
+        <ContextMenuSubContent>
+          {TYPE_ORDER.map((type) => (
+            <ContextMenuItem key={type} onSelect={() => onInsert(type, "after")}>
+              {BLOCK_TYPE_LABELS[type] ?? type}
+            </ContextMenuItem>
+          ))}
         </ContextMenuSubContent>
       </ContextMenuSub>
 
