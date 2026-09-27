@@ -4,8 +4,9 @@ import type { FieldType } from "../../src/types"
 import { cn } from "../lib/utils"
 import { Info, Search, Move } from "lucide-react"
 
-/** Modern high-fidelity wireframe thumbnail per field type matching modern design editors. */
-function Wireframe({ type, active }: { type: FieldType; active?: boolean }) {
+/** Modern high-fidelity wireframe thumbnail per field type matching modern design editors.
+ *  Exported so the Templates panel can stack the same rows into a form-level preview. */
+export function Wireframe({ type, active }: { type: FieldType; active?: boolean }) {
   const line = "rounded-full bg-foreground/20 transition-colors"
   const box = "rounded-md border border-foreground/25 bg-background/50 transition-colors"
   const accentBox = "rounded-md border border-studio-accent bg-studio-accent-subtle text-studio-accent"

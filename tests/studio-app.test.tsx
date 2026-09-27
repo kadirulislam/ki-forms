@@ -35,6 +35,7 @@ describe("studio app (shadcn rebuild)", () => {
     expect(panelButton("More actions")).toBeTruthy()
     // open drawer → rail buttons available
     openDrawer()
+    expect(panelButton("Templates")).toBeTruthy()
     expect(panelButton("Blocks")).toBeTruthy()
     expect(panelButton("Style")).toBeTruthy()
     expect(panelButton("Form")).toBeTruthy()
@@ -45,7 +46,7 @@ describe("studio app (shadcn rebuild)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Docs" }))
 
     expect(screen.getByRole("dialog")).toBeTruthy()
-    expect(screen.getByText(/Choose a template, edit fields/i)).toBeTruthy()
+    expect(screen.getByText(/Choose a template from the Templates panel/i)).toBeTruthy()
     fireEvent.click(screen.getByRole("button", { name: "Conditions" }))
     expect(screen.getByText(/Use showIf with field/i)).toBeTruthy()
     expect(screen.getByRole("link", { name: /Full documentation/i }).getAttribute("href")).toBe(
@@ -70,6 +71,54 @@ describe("studio app (shadcn rebuild)", () => {
     await waitFor(() => {
       expect(screen.getAllByText("Field settings").length).toBeGreaterThan(0)
     })
+  })
+
+  it("templates live in the left panel with previews, not a modal", () => {
+    render(<App />)
+    openDrawer()
+    fireEvent.click(panelButton("Templates"))
+    for (const name of ["Blank canvas", "Waitlist", "Contact form", "Signup with conditionals", "Job application", "Feedback"]) {
+      expect(screen.getByRole("button", { name: new RegExp(name) })).toBeTruthy()
+    }
+    // Every card previews its form as a constant-height stack of wireframes.
+    expect(screen.getAllByTestId("template-preview-rows")).toHaveLength(6)
+  })
+
+  it("applies a template to an empty canvas without asking", () => {
+    localStorage.setItem("ki-studio-doc-v2", JSON.stringify({ title: "Empty", fields: [], theme: {}, variant: "classic" }))
+    render(<App />)
+
+    openDrawer()
+    fireEvent.click(panelButton("Templates"))
+    fireEvent.click(screen.getByRole("button", { name: /Waitlist/ }))
+
+    // Applied straight away — no confirmation for an empty canvas.
+    expect(screen.queryByText("Replace current form?")).toBeNull()
+  })
+
+  it("confirms before a template replaces existing fields", () => {
+    localStorage.setItem(
+      "ki-studio-doc-v2",
+      JSON.stringify({ title: "Has fields", fields: [{ name: "email", type: "email" }], theme: {}, variant: "classic" }),
+    )
+    render(<App />)
+
+    openDrawer()
+    fireEvent.click(panelButton("Templates"))
+    fireEvent.click(screen.getByRole("button", { name: /Contact form/ }))
+
+    expect(screen.getByText("Replace current form?")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+    expect(screen.queryByText("Replace current form?")).toBeNull()
+  })
+
+  it("no longer offers a topbar or overflow Templates entry point", () => {
+    render(<App />)
+    // Templates live in the left panel now, so the topbar button and the
+    // mobile overflow item are both gone. Matched exactly to avoid the rail
+    // tab, which is legitimately also called "Templates".
+    expect(screen.queryByRole("button", { name: "Templates…" })).toBeNull()
+    expect(screen.queryByRole("menuitem", { name: "Templates…" })).toBeNull()
   })
 
   it("opens the Inspector and edits the field name", async () => {

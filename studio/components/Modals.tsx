@@ -4,7 +4,6 @@ import { KiForm } from "../../src/renderer/KiForm"
 import { toJson, toRoundTripSnippet, importSchemaBlock, exportReact } from "../lib/export"
 import { parseDocumentImport, parseDocumentImportAll, type DocumentImport } from "../lib/schema"
 import { PREVIEW_SCOPE_VALUE, scopeCustomCss, validateCustomCss } from "../lib/css"
-import { TEMPLATES } from "../lib/templates"
 import { appsScript, diagnoseNoCors } from "../lib/sheets"
 import { Tabs, TabsList, TabsContent } from "./ui/tabs"
 import { Button } from "./ui/button"
@@ -30,38 +29,6 @@ import { Check, FileJson, FileCode2, BookOpen, ExternalLink, RotateCcw, Download
 export { StudioCopyButton as CopyButton }
 export { useStudioEscape as useEscape }
 
-export type TemplatesModalProps = {
-  onPick: (id: string) => void
-  onClose: () => void
-}
-
-export function TemplatesModal({ onPick, onClose }: TemplatesModalProps) {
-  return (
-    <StudioModal size="md" testId="templates-modal" onClose={onClose} title="Start from a template" description="Pick a schema — everything stays editable on the canvas.">
-      <ModalBody>
-        <div className="grid max-h-[60vh] grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
-          {TEMPLATES.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className={cn(
-                "flex cursor-pointer flex-col gap-1 rounded-lg border p-3 text-left transition-colors hover:bg-accent",
-              )}
-              onClick={() => onPick(t.id)}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <strong className="text-sm font-medium">{t.name}</strong>
-                <Badge variant="secondary">{t.fields.length} fields</Badge>
-              </div>
-              <span className="text-xs text-muted-foreground">{t.description}</span>
-            </button>
-          ))}
-        </div>
-      </ModalBody>
-    </StudioModal>
-  )
-}
-
 export type DocsModalProps = { onClose: () => void }
 
 type DocsSection = {
@@ -79,15 +46,16 @@ const DOCS_SECTIONS: DocsSection[] = [
   {
     id: "quick-start",
     label: "Getting started",
-    body: "Choose a template, edit fields on the canvas, customize the Style and Form panels, preview device widths, then use Code to export. Your work autosaves to this browser.",
+    body: "Choose a template from the Templates panel, edit fields on the canvas, customize the Style and Form panels, preview device widths, then use Code to export. Your work autosaves to this browser.",
     bullets: [
+      "Templates panel: pick a starting point; every field stays editable.",
       "Blocks panel: click or drag a block to append it to the canvas.",
       "Click a canvas card to open Field settings (rename, required, conditions).",
       "Style panel: theme tokens + shadcn presets — preview and exports stay in sync.",
       "Form panel: title, classic / conversational variant, endpoint URL.",
       "Code button: copy Schema JSON or a ready-to-paste React component.",
     ],
-    tryIt: "Try it: open Templates, load Signup, then press Code → Schema JSON.",
+    tryIt: "Try it: open the Templates panel, load Signup, then press Code → Schema JSON.",
   },
   {
     id: "canvas",
@@ -97,7 +65,7 @@ const DOCS_SECTIONS: DocsSection[] = [
       "Drag cards to reorder (touch supported); ArrowUp / ArrowDown moves the selected field.",
       "Duplicate (Ctrl+D) and Delete keys work when a field is selected; Escape deselects.",
       "Undo / Redo covers the last 50 document states; typing is coalesced.",
-      "Empty canvas offers Start from a template — nothing is lost silently.",
+      "Empty canvas offers Start from a template, which opens the Templates panel — nothing is lost silently.",
     ],
     tip: "Autosave key: ki-studio-doc-v2 in localStorage. Corrupt saves fall back to the Signup template.",
   },

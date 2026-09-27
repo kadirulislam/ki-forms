@@ -15,11 +15,13 @@ import {
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable"
 import { FormCanvas, FieldPreview } from "./components/FormCanvas"
 import { BlocksPanel } from "./components/BlocksPanel"
+import { TemplatesPanel } from "./components/TemplatesPanel"
+import { ConfirmApplyDialog } from "./components/StudioModal"
 import { StylePanel } from "./components/StylePanel"
 import { FormPanel } from "./components/FormPanel"
 import { AiPanel } from "./components/AiPanel"
 import { Inspector } from "./components/Inspector"
-import { TemplatesModal, DocsModal, CodeModal, PreviewOverlay, SheetsModal } from "./components/Modals"
+import { DocsModal, CodeModal, PreviewOverlay, SheetsModal } from "./components/Modals"
 import { validateSchema } from "./lib/schema"
 import { toReactSnippet } from "./lib/export"
 import { PREVIEW_SCOPE_VALUE, scopeCustomCss, validateCustomCss } from "./lib/css"
@@ -45,7 +47,7 @@ import {
   Monitor,
   Tablet,
   Smartphone,
-  Zap,
+  LayoutTemplate,
   Code2,
   Eye,
   Copy,
@@ -67,7 +69,7 @@ import {
 
 type Variant = "classic" | "conversational"
 type Doc = { title: string; fields: Field[]; theme: KiTheme; variant: Variant; presetId?: string; endpoint?: string; customCss?: string }
-type Panel = "blocks" | "style" | "form" | "ai"
+type Panel = "templates" | "blocks" | "style" | "form" | "ai"
 type DeviceMode = "desktop" | "tablet" | "mobile"
 
 const STORAGE_KEY = "ki-studio-doc-v2"
@@ -141,7 +143,9 @@ export default function App() {
     }
   })
   const [device, setDevice] = useState<DeviceMode>("desktop")
-  const [modal, setModal] = useState<"none" | "templates" | "docs" | "code" | "preview" | "sheets">("none")
+  const [modal, setModal] = useState<"none" | "docs" | "code" | "preview" | "sheets">("none")
+  /** Template awaiting confirmation when the canvas is not empty. */
+  const [pendingTemplate, setPendingTemplate] = useState<string | null>(null)
   const [dark, setDark] = useState<boolean>(() => {
     try {
       return localStorage.getItem("ki-studio-dark") === "1"
@@ -397,10 +401,26 @@ export default function App() {
         return { ...docRef.current, fields: r.ok ? r.fields : [] }
       })
       setSelected(null)
-      setModal("none")
+      setPendingTemplate(null)
       toast.success(`Loaded "${tpl.name}"`)
     },
     [update],
+  )
+
+  /**
+   * Applying a template replaces every field. A panel card is one click away, so
+   * a non-empty canvas asks first — matching how the Code modal already guards
+   * replacement. An empty canvas applies immediately.
+   */
+  const requestTemplate = useCallback(
+    (id: string) => {
+      if (docRef.current.fields.length > 0) {
+        setPendingTemplate(id)
+        return
+      }
+      applyTemplate(id)
+    },
+    [applyTemplate],
   )
 
   const applyDocument = useCallback(
@@ -525,7 +545,15 @@ export default function App() {
     }
   }, [panelOpen])
 
+  /** Canvas empty-state CTA: reveal the Templates panel in whichever surface is in use. */
+  const openTemplatesPanel = useCallback(() => {
+    setPanel("templates")
+    setPanelOpen(true)
+    setDrawerOpen(true)
+  }, [])
+
   const railItems: { id: Panel; icon: React.ReactNode; label: string }[] = [
+    { id: "templates", icon: <LayoutTemplate className="size-5" />, label: "Templates" },
     { id: "blocks", icon: <Blocks className="size-5" />, label: "Blocks" },
     { id: "style", icon: <Paintbrush className="size-5" />, label: "Style" },
     { id: "form", icon: <Settings2 className="size-5" />, label: "Form" },
@@ -534,6 +562,7 @@ export default function App() {
 
   const panelBody = (
     <>
+      {panel === "templates" && <TemplatesPanel onPick={requestTemplate} />}
       {panel === "blocks" && <BlocksPanel onAdd={(t) => addField(t)} />}
       {panel === "style" && (
         <StylePanel
@@ -675,17 +704,8 @@ export default function App() {
             </Tooltip>
           </div>
 
-          {/* Right section: Action buttons (Templates, Code, Preview, Copy) */}
+          {/* Right section: Action buttons (Code, Docs, Preview, Copy) */}
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setModal("templates")}
-              className="h-8.5 rounded-lg text-xs font-semibold gap-1.5 hidden sm:inline-flex border-border bg-card text-foreground hover:bg-accent hover:text-foreground"
-            >
-              <Zap className="size-3.5 text-studio-accent" style={{ color: "var(--studio-accent)" }} /> Templates
-            </Button>
-
             <Button
               variant="outline"
               size="sm"
@@ -750,9 +770,6 @@ export default function App() {
                   </Button>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setModal("templates")}>
-                  <Zap className="mr-2 size-4" /> Templates…
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setModal("code")}>
                   <Code2 className="mr-2 size-4" /> Code…
                 </DropdownMenuItem>
@@ -892,7 +909,9 @@ export default function App() {
                     <X className="size-4" />
                   </Button>
                 </div>
-                <div className="flex shrink-0 items-center gap-1 border-b px-3 py-2">
+                {/* Five tabs with text labels do not fit a 320-375px drawer, so the
+                    row scrolls instead of clipping the labels. */}
+                <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b px-3 py-2">
                   {railItems.map((p) => (
                     <Button
                       key={p.id}
@@ -1049,7 +1068,7 @@ export default function App() {
                   onMove={moveField}
                   onDuplicate={duplicateField}
                   onDelete={deleteField}
-                  onOpenTemplates={() => setModal("templates")}
+                  onOpenTemplates={openTemplatesPanel}
                 />
               </div>
             </div>
@@ -1091,7 +1110,20 @@ export default function App() {
         </div>
 
         {/* Modals & Overlays */}
-        {modal === "templates" && <TemplatesModal onPick={applyTemplate} onClose={() => setModal("none")} />}
+        <ConfirmApplyDialog
+          open={pendingTemplate !== null}
+          title="Replace current form?"
+          description={
+            pendingTemplate
+              ? `Loading "${TEMPLATES.find((t) => t.id === pendingTemplate)?.name ?? pendingTemplate}" replaces every field on the canvas. Undo (Ctrl+Z) restores them.`
+              : undefined
+          }
+          confirmLabel="Replace"
+          onConfirm={() => {
+            if (pendingTemplate) applyTemplate(pendingTemplate)
+          }}
+          onCancel={() => setPendingTemplate(null)}
+        />
         {modal === "docs" && <DocsModal onClose={() => setModal("none")} />}
         {modal === "code" && (
           <CodeModal
