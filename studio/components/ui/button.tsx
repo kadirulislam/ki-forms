@@ -8,7 +8,8 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-studio-accent text-white shadow-xs hover:bg-studio-accent-hover",
+        // `text-background` rather than `text-white` — see the note in badge.tsx.
+      default: "bg-studio-accent text-background shadow-xs hover:bg-studio-accent-hover",
         destructive:
           "bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20",
         outline:

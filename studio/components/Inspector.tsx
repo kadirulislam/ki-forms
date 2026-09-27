@@ -109,7 +109,7 @@ export function Inspector({ field, otherFields, onChange, onDuplicate, onDelete 
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 border-b border-border/60 bg-sidebar/95 px-3 py-1.5">
+      <div className="sticky top-0 z-10 border-b border-border bg-sidebar px-3 py-1.5">
         <div className="relative">
           <Search
             className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"

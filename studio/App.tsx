@@ -189,11 +189,11 @@ export default function App() {
       // rather than a leftover from before the preset was chosen.
       root.style.removeProperty("--studio-accent-hover")
     } else {
-      // Slate, to match the tokens in ui.css. This inline value is what the
-      // page actually resolves — setting it here overrides the stylesheet, so
-      // the two must not drift.
-      root.style.setProperty("--studio-accent", dark ? "#e2e8f0" : "#0f172a")
-      root.style.setProperty("--studio-accent-hover", dark ? "#f1f5f9" : "#1e293b")
+      // Monochrome, to match the tokens in ui.css. This inline value is what
+      // the page actually resolves — setting it here overrides the stylesheet,
+      // so the two must not drift.
+      root.style.setProperty("--studio-accent", dark ? "#fafafa" : "#0a0a0a")
+      root.style.setProperty("--studio-accent-hover", dark ? "#ffffff" : "#18181b")
       root.style.removeProperty("--studio-radius")
     }
   }, [preset, presetDark, dark])
@@ -755,7 +755,7 @@ export default function App() {
           </div>
 
           {/* Center Cluster: Undo / Redo / Dark mode */}
-          <div className="hidden lg:flex items-center gap-1 rounded-xl border border-border bg-card p-1 shadow-2xs text-foreground">
+          <div className="hidden lg:flex items-center gap-1 rounded-xl border border-border bg-card p-1 text-foreground">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -841,8 +841,8 @@ export default function App() {
             <Button
               size="sm"
               onClick={copyReact}
-              className="h-8.5 rounded-lg bg-studio-accent hover:bg-studio-accent-hover text-white text-xs font-semibold gap-1.5 shadow-xs hidden lg:inline-flex"
-              style={{ backgroundColor: "var(--studio-accent)", color: "#ffffff" }}
+              className="h-8.5 bg-studio-accent hover:bg-studio-accent-hover text-background text-xs font-semibold gap-1.5 hidden lg:inline-flex"
+              style={{ backgroundColor: "var(--studio-accent)", color: "var(--background)" }}
             >
               <Copy className="size-3.5" /> Copy Code
             </Button>
@@ -916,7 +916,7 @@ export default function App() {
           >
             {/* Top brand monogram */}
             <div className="flex flex-col items-center gap-4">
-              <div className="flex size-10 items-center justify-center rounded-2xl border border-border/60 bg-accent/60 shadow-2xs text-foreground">
+              <div className="flex size-10 items-center justify-center rounded-2xl border border-border/60 bg-accent/60 text-foreground">
                 <span className="text-base font-extrabold tracking-tighter">ki</span>
               </div>
 
@@ -934,14 +934,14 @@ export default function App() {
                             setPanel(p.id)
                             if (!panelOpen) setPanelOpen(true)
                           }}
-                          className={`flex size-9 items-center justify-center rounded-lg transition-colors ${
+                          className={`flex size-9 items-center justify-center transition-colors ${
                             isActive
-                              ? "bg-studio-accent text-white shadow-xs"
+                              ? "bg-studio-accent text-background"
                               : "text-muted-foreground hover:bg-accent hover:text-foreground"
                           }`}
                           style={
                             isActive
-                              ? { backgroundColor: "var(--studio-accent)", color: "#ffffff" }
+                              ? { backgroundColor: "var(--studio-accent)", color: "var(--background)" }
                               : undefined
                           }
                         >
@@ -998,13 +998,13 @@ export default function App() {
                 </Button>
               </div>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-4 studio-scrollbar">{panelBody}</div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-3 studio-scrollbar">{panelBody}</div>
           </aside>
 
           {/* Main Canvas Work Area */}
           <main className="studio-canvas relative flex min-w-72 flex-1 flex-col overflow-hidden" onClick={() => setSelected(null)}>
             {/* Canvas Sub-Header Bar (Controls) */}
-            <div className="flex h-10 shrink-0 items-center justify-between border-b border-border/80 bg-card/60 px-3 z-10">
+            <div className="flex h-10 shrink-0 items-center justify-between border-b border-border bg-card px-3 z-10">
               <div className="flex items-center gap-2">
                 {/* Doubles as the panel toggle on narrow screens now that there
                     is no drawer to open. */}
@@ -1023,7 +1023,7 @@ export default function App() {
               {/* Center & Right: Zoom & Device mode */}
               <div className="flex items-center gap-3 ml-auto">
                 {/* Zoom controls */}
-                <div className="hidden sm:flex items-center gap-1 rounded-lg border border-border/80 bg-card px-2 py-0.5 shadow-2xs text-xs">
+                <div className="hidden sm:flex items-center gap-1 rounded-lg border border-border/80 bg-card px-2 py-0.5 text-xs">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -1048,7 +1048,7 @@ export default function App() {
                 </div>
 
                 {/* Device viewport switcher */}
-                <div className="flex items-center rounded-lg border border-border/80 bg-card p-0.5 shadow-2xs">
+                <div className="flex items-center rounded-lg border border-border/80 bg-card p-0.5">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
@@ -1060,7 +1060,7 @@ export default function App() {
                         }}
                         className={`size-7 rounded-md flex items-center justify-center transition-colors ${
                           device === "desktop"
-                            ? "bg-accent text-foreground shadow-2xs"
+                            ? "bg-accent text-foreground"
                             : "text-muted-foreground hover:text-foreground"
                         }`}
                       >
@@ -1081,7 +1081,7 @@ export default function App() {
                         }}
                         className={`size-7 rounded-md flex items-center justify-center transition-colors ${
                           device === "tablet"
-                            ? "bg-accent text-foreground shadow-2xs"
+                            ? "bg-accent text-foreground"
                             : "text-muted-foreground hover:text-foreground"
                         }`}
                       >
@@ -1102,7 +1102,7 @@ export default function App() {
                         }}
                         className={`size-7 rounded-md flex items-center justify-center transition-colors ${
                           device === "mobile"
-                            ? "bg-accent text-foreground shadow-2xs"
+                            ? "bg-accent text-foreground"
                             : "text-muted-foreground hover:text-foreground"
                         }`}
                       >
@@ -1135,6 +1135,7 @@ export default function App() {
                 <FormCanvas
                   fields={doc.fields}
                   theme={doc.theme}
+                  dark={dark}
                   selected={selected}
                   onSelect={setSelected}
                   onMove={moveField}

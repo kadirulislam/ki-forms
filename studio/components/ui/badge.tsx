@@ -8,7 +8,10 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-transparent bg-studio-accent text-white",
+        // `text-background`, not `text-white`: the accent is near-black in light
+      // mode and near-white in dark, so a hardcoded white label is correct in
+      // one and invisible in the other.
+      default: "border-transparent bg-studio-accent text-background",
         secondary: "border-transparent bg-secondary text-secondary-foreground",
         destructive: "border-transparent bg-destructive text-white",
         outline: "text-foreground",

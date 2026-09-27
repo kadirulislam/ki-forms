@@ -5,73 +5,87 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── Square edges ──────────────────────────────────────────────────────────
+   Modern minimal platforms get their character from hairline rules and
+   whitespace rather than from curves. There were 103 `rounded-*` utilities
+   scattered across the Studio, so the rule is stated once here instead of
+   chased through every component: forcing the radius at the subtree root is
+   both a much smaller diff and impossible to regress one component at a time.
+
+   The device preview is exempt. Those frames are meant to read as a MacBook,
+   an iPad and an iPhone — squaring them turns them into anonymous monitors and
+   defeats the point of showing the form in its real context. */
+.studio-root *:not([data-ki-preview] *),
+.studio-root *:not([data-ki-preview] *)::before,
+.studio-root *:not([data-ki-preview] *)::after {
+  border-radius: 0 !important;
+}
+
 :root {
-  /* High-contrast, crystal-clear light theme */
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  /* Monochrome. No hue anywhere in the chrome: a neutral ramp, near-black ink
+     on white, and hairline rules doing all the structural work. The one colour
+     left is `destructive`, which stays because a delete action with no
+     distinction is worse than a palette that is not literally greyscale. */
+  --background: #ffffff;
+  --foreground: #0a0a0a;
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #0a0a0a;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #0f172a;
+  --popover-foreground: #0a0a0a;
+  --primary: #0a0a0a;
   --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --muted: #f1f5f9;
-  --muted-foreground: #475569;
-  --accent: #f1f5f9;
-  --accent-foreground: #0f172a;
-  --destructive: #ef4444;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #0a0a0a;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --accent: #f4f4f5;
+  --accent-foreground: #0a0a0a;
+  --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: #e2e8f0;
-  --input: #cbd5e1;
-  --ring: #0f172a;
-  --radius: 0.625rem;
+  --border: #e4e4e7;
+  --input: #d4d4d8;
+  --ring: #0a0a0a;
+  --radius: 0;
   --sidebar: #ffffff;
-  --sidebar-foreground: #0f172a;
-  /* Slate studio accent.
-     The accent was terracotta, and it had crept onto the brand mark, the
-     active rail icon, the Copy Code button, the selection border, the field
-     badges and the focus ring -- so the loudest thing on screen was the
-     editor, not the form. A neutral slate keeps the selection legible (a dark
-     rule on white is a strong signal) while letting the canvas be the only
-     saturated thing left. The form's own accent is a separate token and is
-     unaffected. */
-  --studio-accent: #0f172a;
-  --studio-accent-hover: #1e293b;
-  --studio-accent-subtle: rgba(15, 23, 42, 0.05);
-  --studio-accent-border: rgba(15, 23, 42, 0.28);
-  --studio-radius: 0.625rem;
+  --sidebar-foreground: #0a0a0a;
+  /* Selection is ink, not a colour. A dark rule on white is a strong signal and
+     keeps the canvas the only place with any tone in it. The form's own accent
+     is a separate token and is unaffected. */
+  --studio-accent: #0a0a0a;
+  --studio-accent-hover: #18181b;
+  --studio-accent-subtle: rgba(10, 10, 10, 0.05);
+  --studio-accent-border: rgba(10, 10, 10, 0.3);
+  --studio-radius: 0;
 }
 
 .dark {
-  /* Slate throughout: the previous zinc ramp (#09090b / #141417 / #202024)
-     carried a warm cast that fought the cool neutrals in light mode. */
-  --background: #020617;
-  --foreground: #f1f5f9;
-  --card: #0f172a;
-  --card-foreground: #f1f5f9;
-  --popover: #0f172a;
-  --popover-foreground: #f1f5f9;
-  --primary: #e2e8f0;
-  --primary-foreground: #0f172a;
-  --secondary: #1e293b;
-  --secondary-foreground: #f1f5f9;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --accent: #1e293b;
-  --accent-foreground: #f1f5f9;
-  --destructive: #dc2626;
+  /* The same monochrome, inverted: near-black ground, off-white ink, and the
+     same hairline weight. */
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #0a0a0a;
+  --card-foreground: #fafafa;
+  --popover: #0a0a0a;
+  --popover-foreground: #fafafa;
+  --primary: #fafafa;
+  --primary-foreground: #09090b;
+  --secondary: #18181b;
+  --secondary-foreground: #fafafa;
+  --muted: #18181b;
+  --muted-foreground: #a1a1aa;
+  --accent: #18181b;
+  --accent-foreground: #fafafa;
+  --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #1e293b;
-  --input: #334155;
-  --ring: #e2e8f0;
-  --sidebar: #0b1220;
-  --sidebar-foreground: #f1f5f9;
-  --studio-accent: #e2e8f0;
-  --studio-accent-hover: #f1f5f9;
-  --studio-accent-subtle: rgba(226, 232, 240, 0.08);
-  --studio-accent-border: rgba(226, 232, 240, 0.3);
+  --border: #27272a;
+  --input: #3f3f46;
+  --ring: #fafafa;
+  --sidebar: #0a0a0a;
+  --sidebar-foreground: #fafafa;
+  --studio-accent: #fafafa;
+  --studio-accent-hover: #ffffff;
+  --studio-accent-subtle: rgba(250, 250, 250, 0.08);
+  --studio-accent-border: rgba(250, 250, 250, 0.3);
 }
 
 @theme inline {

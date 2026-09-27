@@ -11,7 +11,7 @@ export const TEMPLATES: StudioTemplate[] = [
   {
     id: "blank",
     name: "Blank canvas",
-    description: "Start from scratch with a single text field",
+    description: "One empty text field",
     fields: [{ name: "name", type: "text", label: "Full name", placeholder: "Your name" }],
   },
   {
@@ -41,7 +41,7 @@ export const TEMPLATES: StudioTemplate[] = [
   {
     id: "signup",
     name: "Signup with conditionals",
-    description: "Role select that reveals a company field (showIf demo)",
+    description: "Role select reveals a company field",
     fields: [
       { name: "email", type: "email", placeholder: "you@company.com", required: true },
       { name: "password", type: "password", required: true },
@@ -53,7 +53,7 @@ export const TEMPLATES: StudioTemplate[] = [
   {
     id: "job-app",
     name: "Job application",
-    description: "Multi-condition showIf with OR logic",
+    description: "Multi-condition showIf (OR)",
     fields: [
       { name: "fullName", type: "text", label: "Full name", required: true },
       { name: "email", type: "email", placeholder: "you@example.com", required: true },
@@ -77,7 +77,7 @@ export const TEMPLATES: StudioTemplate[] = [
   {
     id: "feedback",
     name: "Feedback",
-    description: "Rating-style select plus a conditional follow-up",
+    description: "Rating plus a follow-up question",
     fields: [
       { name: "email", type: "email", placeholder: "you@company.com" },
       { name: "rating", type: "select", label: "How would you rate ki-forms?", options: ["⭐ 1", "⭐⭐ 2", "⭐⭐⭐ 3", "⭐⭐⭐⭐ 4", "⭐⭐⭐⭐⭐ 5"], defaultValue: "⭐⭐⭐⭐⭐ 5" },

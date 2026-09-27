@@ -187,8 +187,8 @@ function SortableFieldCard({
       {selected && (
         <div className="absolute -top-3 right-4 z-20 flex items-center gap-1.5 pointer-events-none">
           <span
-            className="rounded-md bg-studio-accent px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-white shadow-xs"
-            style={{ backgroundColor: "var(--studio-accent)", color: "#ffffff" }}
+            className="bg-studio-accent px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-background"
+            style={{ backgroundColor: "var(--studio-accent)", color: "var(--background)" }}
           >
             {BLOCK_TYPE_LABELS[field.type || "text"] ?? field.type}
           </span>
@@ -341,6 +341,8 @@ function EndDropZone({ dragging }: { dragging: boolean }) {
 export type FormCanvasProps = {
   fields: Field[]
   theme?: KiTheme
+  /** Studio dark mode. The paper stays light unless the form themes itself. */
+  dark?: boolean
   selected: number | null
   onSelect: (index: number | null) => void
   onMove: (index: number, delta: -1 | 1) => void
@@ -358,6 +360,7 @@ export type FormCanvasProps = {
 export function FormCanvas({
   fields,
   theme,
+  dark = false,
   selected,
   onSelect,
   onMove,
@@ -375,11 +378,17 @@ export function FormCanvas({
 
   return (
     <div
-      className="relative p-5 sm:p-8 ki-form rounded-2xl sm:rounded-3xl transition-colors bg-card text-foreground"
+      className="relative ki-form p-5 transition-colors sm:p-8"
       style={{
         ...cssVars,
-        backgroundColor: theme?.surfaceColor || undefined,
-        color: theme?.textColor || undefined,
+        // The paper represents what the user will actually get, and the form
+        // library's ink is dark — so the sheet stays light even when the Studio
+        // is in dark mode. Letting it follow the UI gave a near-black label on a
+        // near-black sheet (contrast ~1.1:1, effectively invisible). A form
+        // that genuinely wants a dark surface sets `surfaceColor`, which still
+        // wins here.
+        backgroundColor: theme?.surfaceColor || (dark ? "#f8fafc" : "#ffffff"),
+        color: theme?.textColor || "#111827",
         fontFamily: theme?.fontFamily || undefined,
       }}
     >

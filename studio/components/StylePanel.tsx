@@ -79,8 +79,8 @@ export function StylePanel({ theme, preset, presetDark, onPreset, onPresetMode, 
                 <span className="h-1.5 w-8 rounded-sm" style={{ background: t.borderColor }} />
                 {active && (
                   <span
-                    className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-studio-accent text-white"
-                    style={{ backgroundColor: "var(--studio-accent)", color: "#ffffff" }}
+                    className="absolute -right-1 -top-1 flex size-4 items-center justify-center bg-studio-accent text-background"
+                    style={{ backgroundColor: "var(--studio-accent)", color: "var(--background)" }}
                   >
                     <Check className="size-2.5" />
                   </span>
