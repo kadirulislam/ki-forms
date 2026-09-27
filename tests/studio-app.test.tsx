@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react"
 import App from "../studio/App"
+import type { Field } from "../src/types"
 
 /**
  * Studio App shell smoke tests (shadcn rebuild, responsive shell).
@@ -63,6 +64,55 @@ describe("studio app (shadcn rebuild)", () => {
     expect(palette?.className).not.toContain("fixed")
   })
 
+  it("keeps the right column docked with no field selected, showing the form", () => {
+    localStorage.setItem(
+      "ki-studio-doc-v2",
+      JSON.stringify({
+        title: "Signup",
+        variant: "conversational",
+        endpoint: "https://x.dev/h",
+        fields: [
+          { name: "alpha", type: "text" },
+          { name: "beta", type: "email", showIf: { field: "alpha", equals: "" } },
+        ],
+        theme: {},
+      }),
+    )
+    render(<App />)
+
+    // Docked means always present. It used to be gated on a selection, so the
+    // column vanished the moment you clicked the canvas.
+    const panel = screen.getByTestId("inspector-panel")
+    expect(panel).toBeTruthy()
+    expect(screen.getByText("Form overview")).toBeTruthy()
+
+    // And it must be worth reading: a summary of the actual document, not a
+    // bare "nothing selected" notice.
+    expect(screen.getByText("Signup")).toBeTruthy()
+    expect(screen.getByText("2 · 2 types")).toBeTruthy()
+    expect(screen.getByText("Conversational")).toBeTruthy()
+    expect(screen.getByText("1 field shown conditionally")).toBeTruthy()
+    expect(screen.getByText("https://x.dev/h")).toBeTruthy()
+    // No field is selected, so there is nothing to deselect.
+    expect(screen.queryByRole("button", { name: "Close field settings" })).toBeNull()
+  })
+
+  it("swaps the right column to field settings once a field is selected", async () => {
+    localStorage.setItem(
+      "ki-studio-doc-v2",
+      JSON.stringify({ title: "T", fields: [{ name: "alpha" }], theme: {}, variant: "classic" }),
+    )
+    render(<App />)
+    expect(screen.getByText("Form overview")).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: "Field alpha" }))
+
+    await waitForOverlay(() => expect(screen.getByText("Field settings")).toBeTruthy())
+    expect(screen.queryByText("Form overview")).toBeNull()
+    // Now there is something to deselect.
+    expect(screen.getByRole("button", { name: "Close field settings" })).toBeTruthy()
+  })
+
   /**
    * One menu per file, deliberately.
    *
@@ -104,6 +154,55 @@ describe("studio app (shadcn rebuild)", () => {
 
     fireEvent.click(screen.getByRole("menuitem", { name: /Copy field name/i }))
     await waitFor(() => expect(writeText).toHaveBeenCalledWith("alpha"))
+  })
+
+  /**
+   * Regression: the context menu must only ever write a document that survives
+   * a reload.
+   *
+   * `loadDoc` falls back to the whole signup template if `validateSchema`
+   * rejects the field array, so a single invalid property silently costs the
+   * user their whole form. The canonical validator requires exactly one of
+   * `equals` / `notEquals` on a condition, which is easy to get wrong when
+   * writing `{ field }` from a menu that has not asked for a value yet.
+   */
+  it("every field shape the context menu can write passes the canonical validator", async () => {
+    const { validateFields } = await import("../src/schema/validate")
+    const { TEMPLATES } = await import("../studio/lib/templates")
+
+    // Each entry is a field exactly as one of the menu's actions produces it.
+    const written: Record<string, unknown>[] = [
+      { name: "a", required: true },
+      { name: "a", label: false },
+      { name: "a", width: "full" },
+      { name: "a", width: "half" },
+      { name: "a", type: "email" },
+      { name: "a", type: "select" },
+      // Leaving `select` must not leave orphaned options behind.
+      { name: "a", type: "text" },
+      // "Show only when" from the context menu: it picks the field but not the
+      // value, so the comparison has to be seeded.
+      { name: "a", showIf: { field: "b", equals: "" } },
+      { name: "a", showIf: { field: "b", equals: "x" } },
+      { name: "a", showIf: { field: "b", notEquals: "x" } },
+    ]
+
+    for (const field of written) {
+      const result = validateFields([{ name: "b", type: "text" }, field])
+      expect(result.success, JSON.stringify(field)).toBe(true)
+    }
+
+    // Why the comparison is seeded rather than left for the user. This is the
+    // exact shape the menu used to write, and it is rejected — which costs the
+    // user their entire form on the next reload.
+    const bare = validateFields([{ name: "b" }, { name: "a", showIf: { field: "b" } }])
+    expect(bare.success).toBe(false)
+
+    // A full template with a condition applied must survive too.
+    const contact = TEMPLATES.find((t) => t.id === "contact")!
+    const base = contact.fields.filter((f) => typeof f === "object") as Field[]
+    const withCondition = base.map((f, i) => (i === 1 ? { ...f, showIf: { field: base[0].name, equals: "" } } : f))
+    expect(validateFields(withCondition).success).toBe(true)
   })
 
   it("resolves the docs URL from wherever the Studio is served", async () => {

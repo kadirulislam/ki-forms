@@ -171,7 +171,17 @@ export function FieldContextMenuContent({
               </>
             )}
             {conditionTargets.map((target) => (
-              <ContextMenuItem key={target.name} onSelect={() => onPatch({ showIf: { field: target.name } })}>
+              <ContextMenuItem
+                key={target.name}
+                // `equals: ""` is load-bearing, not a placeholder. The canonical
+                // validator requires exactly one of equals/notEquals on every
+                // condition, so a bare `{ field }` is invalid — and an invalid
+                // field makes loadDoc discard the *whole* field array in favour
+                // of the fallback template on the next reload. Seeding an empty
+                // comparison keeps the document valid and leaves the user one
+                // edit (the value) in the condition editor.
+                onSelect={() => onPatch({ showIf: { field: target.name, equals: "" } })}
+              >
                 {BLOCK_TYPE_LABELS[target.type || "text"] ?? target.type}
                 <span className="ml-1 font-mono text-[11px] text-muted-foreground">{target.name}</span>
               </ContextMenuItem>

@@ -21,6 +21,7 @@ import { StylePanel } from "./components/StylePanel"
 import { FormPanel } from "./components/FormPanel"
 import { AiPanel } from "./components/AiPanel"
 import { Inspector } from "./components/Inspector"
+import { FormOverview } from "./components/FormOverview"
 import { CodeModal, PreviewOverlay, SheetsModal } from "./components/Modals"
 import { validateSchema, parseDocumentImportAll, type DocumentImport } from "./lib/schema"
 import { docsHref } from "./lib/docs-url"
@@ -1126,23 +1127,40 @@ export default function App() {
             {/* Floating Inspector Panel for smaller screens */}
           </main>
 
-          {/* Right column. Docked at every width, so the settings for the field
-              you just selected are always where you left them. */}
-          {selectedField && inspectorBody && (
-            <aside
-              data-testid="inspector-panel"
-              className="studio-scrollbar flex w-84 shrink-0 flex-col border-l border-border/80 bg-sidebar"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/80 px-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Field settings</span>
+          {/* Right column. Permanently docked at every width — it never
+              disappears, it just changes what it is showing. With a field
+              selected it is that field's settings; with nothing selected it is a
+              summary of the whole document, because a docked panel that blanks
+              out is worse than no panel at all. */}
+          <aside
+            data-testid="inspector-panel"
+            className="studio-scrollbar flex w-84 shrink-0 flex-col border-l border-border/80 bg-sidebar"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/80 px-4">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                {selectedField ? "Field settings" : "Form overview"}
+              </span>
+              {selectedField && (
                 <Button variant="ghost" size="icon-sm" aria-label="Close field settings" onClick={() => setSelected(null)}>
                   <X className="size-4 text-muted-foreground" />
                 </Button>
-              </div>
-              <div className="min-h-0 flex-1 overflow-y-auto p-4 studio-scrollbar">{inspectorBody}</div>
-            </aside>
-          )}
+              )}
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 studio-scrollbar">
+              {selectedField && inspectorBody ? (
+                inspectorBody
+              ) : (
+                <FormOverview
+                  title={doc.title}
+                  fields={doc.fields}
+                  variant={doc.variant}
+                  endpoint={doc.endpoint}
+                  hasCustomCss={typeof doc.customCss === "string" && doc.customCss.trim() !== ""}
+                />
+              )}
+            </div>
+          </aside>
         </div>
 
         {/* Modals & Overlays */}
