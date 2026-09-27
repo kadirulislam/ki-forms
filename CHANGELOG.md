@@ -2,6 +2,22 @@
 
 All notable changes to ki-forms are documented here.
 
+## [Unreleased]
+
+### Added
+
+- Phase 2 distribution: the `ki-forms` CLI ships with the package (`npx ki-forms ...`, no global install).
+  - `add [name]` scaffolds a ready-to-paste component plus a portable schema document, inferring the template from the phrase (`"waitlist form"` → `waitlist`). Options: `--template`, `--dir`, `--component`, `--js`, `--zod`, `--variant`, `--endpoint`, `--force`, `--dry-run`, `--json`. Refuses to overwrite without `--force`; writes nothing on `--dry-run`.
+  - `list` prints the template catalog, `validate <file>` reports path-specific issues, and `export <file>` emits the component to stdout or `--out`.
+  - Exit codes are script-friendly: `0` success, `1` validation/IO failure, `2` usage error. `--json` makes `add` machine-readable for agents.
+  - The React/Zod codegen and template catalog moved from `studio/lib/*` to `src/codegen/*` so the CLI and the Studio emit byte-identical output; the Studio import paths are preserved as re-exports. Exporting a schema that `add` just wrote reproduces the component byte-for-byte, asserted in CI.
+
+### Fixed
+
+- Studio Code & Schema modal responsiveness: the action toolbar no longer clips its buttons off on phones (it wraps, and labels collapse to icons below `sm`), the five-tab strip fits or scrolls instead of overflowing, and tab panes scroll rather than clipping content below the editor on short viewports. Removed a duplicate "Import from code" button that appeared in both the toolbar and the pane.
+- Editor sizing inside modals now clamps to viewport height. A previous `flex-1` with an explicit `height` collapsed the editor to ~65px, because `flex-1` sets `flex-basis: 0` and discards the height.
+- `vitest` `testTimeout` raised to 15s. "mounts the shell with topbar, drawer rail and canvas" was failing against the 5s default on a 5-6s cold jsdom mount of the whole Studio App.
+
 ## [2.3.0] - 2026-09-22
 
 ### Added
@@ -21,12 +37,6 @@ All notable changes to ki-forms are documented here.
 - Reconcile values/errors when fields change; fix empty-number (`""` not `0`) and checkbox defaults; move `onChange` out of state updater.
 - Associate labels/inputs with IDs and ARIA error wiring; theme-aware submit class.
 - Hidden fields skip external schema errors.
-
-## [Unreleased]
-
-### Planned
-
-- CLI scaffolding, MCP tooling, and shareable schema links (distribution).
 
 ## [2.4.0] - 2026-09-22
 

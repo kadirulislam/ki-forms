@@ -16,6 +16,9 @@ import {
   CODE_CUSTOM_CSS,
   CODE_JSON_SCHEMA,
   CODE_AI_PROMPT,
+  CODE_CLI_ADD,
+  CODE_CLI_VERIFY,
+  CODE_CLI_OUTPUT,
   LANDING_SCHEMA,
   LANDING_REACT,
 } from "./lib/docs-content"
@@ -103,6 +106,7 @@ function renderPage(route: string) {
               <a href="#/docs/styling"><strong>🎨 Themes + scoped CSS</strong><span>Token props plus a scoped CSS export the runtime never injects.</span></a>
               <a href="#/docs/endpoints"><strong>📥 Endpoint submissions</strong><span>POST JSON anywhere, including Google Sheets via Apps Script.</span></a>
               <a href="#/docs/json-schema"><strong>📐 Formal JSON Schema</strong><span>Editor autocomplete and an LLM output contract.</span></a>
+              <a href="#/docs/cli"><strong>⌨️ CLI scaffolding</strong><span><code>npx ki-forms add "waitlist form"</code> writes the component and the schema.</span></a>
               <a href="#/docs/accessibility"><strong>♿ Accessible by default</strong><span>Label wiring, error alerts, focus-first-error, step announcements.</span></a>
             </div>
           </section>
@@ -262,6 +266,36 @@ function renderPage(route: string) {
           <CodeBlock code={CODE_JSON_SCHEMA} language="json" />
           <p>Add <code>&quot;$schema&quot;: &quot;ki-forms/schema.json&quot;</code> at the document top level for autocomplete and LLM output validation — imports ignore the key.</p>
           <Callout title="Canonical validator">The TypeScript validator stays canonical. Duplicate field names, cross-property range checks, and regex compilability are rejected only by it — see the schema description for the full divergence list.</Callout>
+        </PageShell>
+      )
+    case "docs/cli":
+      return (
+        <PageShell eyebrow="Scaffold and validate" title="CLI">
+          <p>
+            <code>ki-forms</code> scaffolds a form into your project and keeps the portable schema honest. It ships with the same
+            package — no extra install, no global tool.
+          </p>
+          <CodeBlock code={CODE_CLI_ADD} language="bash" />
+          <p>
+            <code>add</code> writes two files: a ready-to-paste component and a portable schema document. The template is inferred
+            from the name (<code>&quot;waitlist form&quot;</code> picks <code>waitlist</code>) or set explicitly with{" "}
+            <code>--template</code>. The component comes from the same generator the <a className="text-link" href="#/docs/export">React export</a>{" "}
+            uses, so CLI output and Studio output are byte-identical.
+          </p>
+          <CodeBlock code={CODE_CLI_OUTPUT} language="text" />
+          <p>
+            <code>validate</code> and <code>export</code> work on any schema or document JSON, so a schema edited by hand — or by an
+            LLM — can be checked in CI and turned back into code.
+          </p>
+          <CodeBlock code={CODE_CLI_VERIFY} language="bash" />
+          <Callout title="Round-trip guarantee">
+            Exporting a schema that <code>add</code> just wrote reproduces the component byte-for-byte. The CLI, the Studio, and a
+            hand-edited JSON file can never silently drift apart — CI asserts this on every build.
+          </Callout>
+          <p>
+            <code>--json</code> makes <code>add</code> emit machine-readable output, and exit codes are script-friendly:{" "}
+            <code>0</code> success, <code>1</code> validation or IO failure, <code>2</code> usage error.
+          </p>
         </PageShell>
       )
     case "docs/accessibility":

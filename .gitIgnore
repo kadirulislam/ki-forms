@@ -3,3 +3,4 @@ dist
 dist-demo
 .docusaurus
 PLAN.md
+*.tgz

@@ -6,6 +6,9 @@
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
+  "bin": {
+    "ki-forms": "./dist/cli.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -29,7 +32,9 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "tsup src/index.ts src/ki-forms-zod.ts --format esm,cjs --dts --external zod",
+    "build": "tsup src/index.ts src/ki-forms-zod.ts --format esm,cjs --dts --external zod && npm run build:cli",
+    "build:cli": "tsup --config tsup.cli.config.ts",
+    "cli": "node dist/cli.js",
     "dev": "tsup src/index.ts --watch",
     "test": "vitest run",
     "test:watch": "vitest",

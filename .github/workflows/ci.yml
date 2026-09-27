@@ -28,6 +28,24 @@ jobs:
       - name: Build library
         run: npm run build
 
+      - name: Smoke-test the CLI bin
+        run: |
+          set -euo pipefail
+          test -f dist/cli.js
+          head -n 1 dist/cli.js | grep -q '^#!'
+          node dist/cli.js --version
+          tmp="$(mktemp -d)"
+          mkdir -p "$tmp/src"
+          cd "$tmp"
+          node "$GITHUB_WORKSPACE/dist/cli.js" add "waitlist form" > /dev/null
+          test -f src/forms/WaitlistForm.tsx
+          test -f src/forms/waitlist-form.schema.json
+          node "$GITHUB_WORKSPACE/dist/cli.js" validate src/forms/waitlist-form.schema.json
+          # The scaffolded schema must round-trip to byte-identical code.
+          node "$GITHUB_WORKSPACE/dist/cli.js" export src/forms/waitlist-form.schema.json \
+            --component WaitlistForm --out again.tsx
+          diff src/forms/WaitlistForm.tsx again.tsx
+
       - name: Build docs
         run: npm run docs:build
 

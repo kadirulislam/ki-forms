@@ -472,6 +472,57 @@ autocomplete and LLM output validation — imports ignore the key.
 
 ---
 
+## ⌨️ CLI
+
+The same package ships a CLI. Nothing extra to install, nothing global.
+
+```bash
+# Scaffold a component + portable schema (template inferred from the name)
+npx ki-forms add "waitlist form"
+
+# Templates: blank, waitlist, contact, signup, job-app, feedback
+npx ki-forms add "job application" --zod --dir src/app/forms
+
+# Preview without writing; machine-readable output for agents
+npx ki-forms add "survey" --template feedback --dry-run --json
+```
+
+```
+Created Waitlist (2 fields) from template "waitlist"
+  src/forms/WaitlistForm.tsx
+  src/forms/waitlist-form.schema.json
+```
+
+`add` writes two files: a ready-to-paste component and a portable schema
+document. The component comes from the same generator the React export uses, so
+CLI output and Studio output are byte-identical.
+
+Verify and regenerate from any schema or document JSON — useful in CI, and after
+an LLM edits the schema by hand:
+
+```bash
+npx ki-forms validate src/forms/waitlist-form.schema.json
+npx ki-forms export src/forms/waitlist-form.schema.json \
+  --component WaitlistForm --zod --out src/forms/WaitlistForm.tsx
+npx ki-forms list
+```
+
+| Command | Purpose |
+| --- | --- |
+| `add [name]` | Scaffold a component + portable schema |
+| `list` | List templates |
+| `validate <file>` | Validate a schema or document, with path-specific errors |
+| `export <file>` | Print or write a ready-to-paste React component |
+
+`add` options: `--template`, `--dir`, `--component`, `--js`, `--zod`,
+`--variant`, `--endpoint`, `--force`, `--dry-run`, `--json`. It refuses to
+overwrite existing files without `--force`, and writes nothing on `--dry-run`.
+
+Exit codes are script-friendly: `0` success, `1` validation or IO failure, `2`
+usage error. Requires Node 20+.
+
+---
+
 ## ⚖️ Comparison
 
 ki-forms is a JSON-driven React renderer — not a replacement for React Hook
