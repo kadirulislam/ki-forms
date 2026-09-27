@@ -513,6 +513,7 @@ npx ki-forms list
 | `list` | List templates |
 | `validate <file>` | Validate a schema or document, with path-specific errors |
 | `export <file>` | Print or write a ready-to-paste React component |
+| `share <file>` | Print a shareable Studio link (`--origin`, `--out`) |
 
 `add` options: `--template`, `--dir`, `--component`, `--js`, `--zod`,
 `--variant`, `--endpoint`, `--force`, `--dry-run`, `--json`. It refuses to
@@ -520,6 +521,74 @@ overwrite existing files without `--force`, and writes nothing on `--dry-run`.
 
 Exit codes are script-friendly: `0` success, `1` validation or IO failure, `2`
 usage error. Requires Node 20+.
+
+---
+
+## 🤖 MCP Server
+
+The same package ships an MCP server, so an agent gets the *canonical*
+validator and generator rather than a reimplementation of them.
+
+```json
+{
+  "mcpServers": {
+    "ki-forms": {
+      "command": "npx",
+      "args": ["-y", "ki-forms-mcp"]
+    }
+  }
+}
+```
+
+| Tool | Purpose |
+| --- | --- |
+| `validate_schema` | Validate a field array or document, every issue with its path |
+| `list_templates` | The template catalog |
+| `scaffold_form` | A natural-language phrase → component + schema **contents** |
+| `export_component` | A schema → ready-to-paste React, optionally with zod |
+
+`scaffold_form` and `export_component` return file *contents* rather than
+writing to disk. The agent already has file tools; a server that silently writes
+files is a worse default and harder to compose. `ki-forms add` is the path that
+writes.
+
+The published JSON Schema is served as a resource at
+`ki-forms://schema/ki-form.schema.json`, so an agent authors against the real
+contract instead of guessing property names.
+
+This is a tools subset, not a reference implementation — `initialize`,
+`tools/*`, and `resources/*`. MCP is a moving target, and a focused server that
+works in a real client today is worth more than a complete one that half-works.
+
+---
+
+## 🔗 Share Links
+
+A share link carries a whole form in the URL *fragment*, which browsers never
+send to a server. So sharing a form needs no account, no backend, and no
+privacy caveat:
+
+```text
+https://kadirulislam.github.io/ki-forms/studio/#ki=v1.dZDLisJAEEV_Jdx1b9z…
+#                                     └─ JSON → deflate-raw → base64url
+```
+
+In the Studio, *Copy share link* is in the overflow menu. Opening a link decodes
+it, runs it through the same importer the JSON import uses, and applies it — and
+asks first if the canvas already has fields.
+
+```bash
+npx ki-forms share src/forms/waitlist-form.schema.json
+npx ki-forms share form.schema.json --origin https://forms.example.com/studio/
+```
+
+The encoding uses the native `CompressionStream` (Chrome 80+, Safari 16.4+,
+Firefox 113+, Node 20+) — zero dependencies. A realistic form is 200–500
+characters, short enough to survive a chat client, and the payload is versioned
+so the format can change without breaking old links.
+
+The codec only moves bytes and never validates: a decoded payload is `unknown`
+until it passes the canonical importer, exactly like a hand-edited JSON file.
 
 ---
 

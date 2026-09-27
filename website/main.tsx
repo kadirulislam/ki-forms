@@ -19,6 +19,11 @@ import {
   CODE_CLI_ADD,
   CODE_CLI_VERIFY,
   CODE_CLI_OUTPUT,
+  CODE_MCP_CONFIG,
+  CODE_MCP_TOOLS,
+  CODE_MCP_CALL,
+  CODE_SHARE_CLI,
+  CODE_SHARE_LINK,
   CODE_TWO_COLUMN,
   CODE_AUTOFILL,
   CODE_MESSAGES,
@@ -384,6 +389,66 @@ function renderPage(route: string) {
             <code>--json</code> makes <code>add</code> emit machine-readable output, and exit codes are script-friendly:{" "}
             <code>0</code> success, <code>1</code> validation or IO failure, <code>2</code> usage error.
           </p>
+        </PageShell>
+      )
+    case "docs/mcp":
+      return (
+        <PageShell eyebrow="Agents first" title="MCP server">
+          <p>
+            <code>ki-forms-mcp</code> is a stdio MCP server in the same package as the <a className="text-link" href="#/docs/cli">CLI</a>.
+            It gives an agent the canonical validator, the templates, and the <a className="text-link" href="#/docs/export">React export</a>{" "}
+            generator — so a form an agent writes is a form the Studio and CLI would have written.
+          </p>
+          <CodeBlock code={CODE_MCP_CONFIG} language="json" />
+          <CodeBlock code={CODE_MCP_TOOLS} language="text" />
+          <p>
+            <code>scaffold_form</code> and <code>export_component</code> return file <em>contents</em> rather than writing to disk. The
+            agent already has file tools, and a server that silently writes files is both a worse default and harder to compose.
+            <code>ki-forms add</code> remains the path that writes.
+          </p>
+          <CodeBlock code={CODE_MCP_CALL} language="json" />
+          <p>
+            The server also exposes the published JSON Schema as a resource at <code>ki-forms://schema/ki-form.schema.json</code>, so
+            an agent authors against the real contract instead of guessing property names.
+          </p>
+          <Callout title="The same validator, not a second one">
+            <code>validate_schema</code> returns exactly what <code>validateFields</code> and <code>validateDocument</code> return — the
+            same functions the Studio and the CLI use. The test suite asserts that identity directly, which is what stops the server
+            drifting away from the library.
+          </Callout>
+          <Callout title="Scope">
+            This is a tools subset, not a reference implementation: <code>initialize</code>, <code>tools/*</code>, and{" "}
+            <code>resources/*</code>. MCP is a moving target, and a focused server that works in a real client today is worth more than a
+            complete one that half-works.
+          </Callout>
+        </PageShell>
+      )
+    case "docs/share-links":
+      return (
+        <PageShell eyebrow="No account needed" title="Share links">
+          <p>
+            A share link carries the whole form in the URL <em>fragment</em>. Browsers never send a fragment to a server, so sharing a
+            ki-forms form needs no account, no backend, and no privacy caveat — and it fits the &ldquo;portable JSON, you own the
+            code&rdquo; positioning rather than working against it.
+          </p>
+          <CodeBlock code={CODE_SHARE_LINK} language="text" />
+          <p>
+            In the <a className="text-link" href="#/docs/studio">Studio</a>, <em>Copy share link</em> is in the overflow menu. Opening
+            a link decodes it, runs it through the same importer the JSON import uses, and applies it. On a canvas that already has
+            fields it asks first, exactly like loading a template.
+          </p>
+          <CodeBlock code={CODE_SHARE_CLI} language="bash" />
+          <p>
+            The encoding is <code>JSON → UTF-8 → deflate-raw → base64url</code> using the native{" "}
+            <code>CompressionStream</code> (Chrome 80+, Safari 16.4+, Firefox 113+, Node 20+) — no dependency. A realistic form is
+            200–500 characters, short enough to survive a chat client, and the payload is versioned (<code>ki=v1.</code>) so the format
+            can change without breaking old links.
+          </p>
+          <Callout title="A decoded link is untrusted input">
+            The codec only moves bytes; it never validates. A decoded payload is <code>unknown</code> until it passes the canonical
+            importer, exactly like a hand-edited JSON file. Damaged links report a plain error instead of surfacing a decoder
+            exception, and there is a hard size guard so a link can never become something a chat client truncates.
+          </Callout>
         </PageShell>
       )
     case "docs/accessibility":

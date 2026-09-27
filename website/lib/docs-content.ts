@@ -25,6 +25,8 @@ export const DOC_PAGES: DocPage[] = [
   { route: "docs/ai", id: "ai", title: "AI generation", eyebrow: "Bring your own key", description: "Describe the form, review the schema." },
   { route: "docs/json-schema", id: "json-schema", title: "Formal JSON Schema", eyebrow: "Editor + LLM contract", description: "$schema autocomplete and validation." },
   { route: "docs/cli", id: "cli", title: "CLI", eyebrow: "Scaffold and validate", description: "Scaffold, validate, and export from the terminal." },
+  { route: "docs/mcp", id: "mcp", title: "MCP server", eyebrow: "Agents first", description: "Let an agent validate, scaffold, and export forms." },
+  { route: "docs/share-links", id: "share-links", title: "Share links", eyebrow: "No account needed", description: "A whole form in the URL fragment." },
   { route: "docs/accessibility", id: "accessibility", title: "Accessibility", eyebrow: "Inclusive forms", description: "Labels, errors, and focus." },
   { route: "docs/limitations", id: "limitations", title: "Limitations and roadmap", eyebrow: "Focused scope", description: "What is deferred and why." },
   { route: "playground", id: "playground", title: "Playground", eyebrow: "Live examples", description: "Real KiForm renders with submitted values." },
@@ -192,6 +194,40 @@ npx ki-forms list`
 export const CODE_CLI_OUTPUT = `Created Waitlist (2 fields) from template "waitlist"
   src/forms/WaitlistForm.tsx
   src/forms/waitlist-form.schema.json`
+
+export const CODE_MCP_CONFIG = `{
+  "mcpServers": {
+    "ki-forms": {
+      "command": "npx",
+      "args": ["-y", "ki-forms-mcp"]
+    }
+  }
+}`
+
+export const CODE_MCP_TOOLS = `validate_schema   every issue, with its path
+list_templates    blank | waitlist | contact | signup | job-app | feedback
+scaffold_form     "job application" -> component + schema CONTENTS
+export_component  schema -> ready-to-paste React (+ optional zod)`
+
+export const CODE_MCP_CALL = `// A scaffold call returns the file contents, never writes them.
+{
+  "name": "scaffold_form",
+  "arguments": {
+    "name": "waitlist form",
+    "zod": true
+  }
+}
+// -> { template: "waitlist", files: [{ path, kind, contents }, ...] }`
+
+export const CODE_SHARE_CLI = `# Print a link whose fragment carries the whole form
+npx ki-forms share src/forms/waitlist-form.schema.json
+
+# Point it at a self-hosted Studio instead
+npx ki-forms share form.schema.json --origin https://forms.example.com/studio/`
+
+export const CODE_SHARE_LINK = `https://kadirulislam.github.io/ki-forms/studio/#ki=v1.dZDLisJAEEV_Jdx1b9z…
+
+# ki=v1.<deflate-raw, base64url>`
 
 export const LANDING_SCHEMA = `[
   { "name": "role", "type": "select", "options": ["User", "Admin"] },
