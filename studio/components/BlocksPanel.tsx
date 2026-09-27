@@ -1,4 +1,17 @@
 import { useDraggable } from "@dnd-kit/core"
+import {
+  AlignLeft,
+  Calendar,
+  CheckSquare,
+  ChevronDownSquare,
+  Hash,
+  Link,
+  Lock,
+  Mail,
+  Phone,
+  Type,
+  type LucideIcon,
+} from "lucide-react"
 import { useState } from "react"
 import type { FieldType } from "../../src/types"
 import { cn } from "../lib/utils"
@@ -135,13 +148,35 @@ export const BLOCKS: { type: FieldType; label: string; group: "basic" | "choice"
 ]
 
 /**
+ * Glyph for a compact palette row.
+ *
+ * This is deliberately an icon, not a `Wireframe`. The wireframes are built for
+ * a ~100x48 card — they use `w-full`, `px-2` and `h-6` — so squeezed into a
+ * 20px row they collapse into unrecognisable blobs of different shapes. Icons
+ * are designed to hold their size, so the row stays scannable. The wireframes
+ * still earn their keep on the template cards, which are large enough.
+ */
+const BLOCK_ICONS: Record<string, LucideIcon> = {
+  text: Type,
+  email: Mail,
+  password: Lock,
+  tel: Phone,
+  url: Link,
+  number: Hash,
+  date: Calendar,
+  textarea: AlignLeft,
+  select: ChevronDownSquare,
+  checkbox: CheckSquare,
+}
+
+/**
  * One palette entry.
  *
  * These used to be 130px wireframe cards in a two-column grid, which pushed the
  * field list and the drag hint off-screen and made the palette the loudest
- * thing in the editor. A 30px row with a small glyph holds the same ten types
- * in a third of the height, and once the panel is compact the canvas -- the
- * thing being worked on -- gets the space back.
+ * thing in the editor. A 32px row holds the same ten types in a third of the
+ * height, and once the panel is compact the canvas -- the thing being worked
+ * on -- gets the space back.
  */
 function PaletteCard({
   block,
@@ -154,6 +189,7 @@ function PaletteCard({
     id: `palette-${block.type}`,
     data: { kind: "palette", fieldType: block.type },
   })
+  const Icon = BLOCK_ICONS[block.type] ?? Type
 
   return (
     <button
@@ -168,12 +204,7 @@ function PaletteCard({
         isDragging && "border-dashed border-studio-accent bg-studio-accent-subtle opacity-50",
       )}
     >
-      <span
-        aria-hidden="true"
-        className="pointer-events-none flex size-5 shrink-0 items-center justify-center text-muted-foreground"
-      >
-        <Wireframe type={block.type} active={isDragging} />
-      </span>
+      <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground group-hover:text-foreground" />
       <span className="truncate text-xs font-medium text-foreground/85">{block.label}</span>
       <Move
         aria-hidden="true"

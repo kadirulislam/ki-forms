@@ -27,7 +27,11 @@ function ContextMenuSubTrigger({ className, inset, children, ...props }: React.C
     <ContextMenuPrimitive.SubTrigger
       data-slot="context-menu-sub-trigger"
       className={cn(
-        "flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-none select-none focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground",
+        "flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground",
+        // Without this the submenu's own icon renders at lucide's default 24px
+        // while every sibling item's is pinned to 16px, so the trigger icons
+        // look oversized next to the rest of the menu.
+        "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:size-4",
         inset && "pl-8",
         className,
       )}
