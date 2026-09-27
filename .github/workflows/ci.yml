@@ -45,6 +45,17 @@ jobs:
           node "$GITHUB_WORKSPACE/dist/cli.js" export src/forms/waitlist-form.schema.json \
             --component WaitlistForm --out again.tsx
           diff src/forms/WaitlistForm.tsx again.tsx
+          # A share link must be produced for the scaffolded schema.
+          node "$GITHUB_WORKSPACE/dist/cli.js" share src/forms/waitlist-form.schema.json \
+            --origin https://example.com --out link.txt
+          grep -q '#ki=v1\.' link.txt
+
+      - name: Smoke-test the MCP server
+        run: |
+          set -euo pipefail
+          test -f dist/mcp.js
+          head -n 1 dist/mcp.js | grep -q '^#!'
+          node scripts/mcp-smoke.mjs dist/mcp.js
 
       - name: Build docs
         run: npm run docs:build

@@ -4,6 +4,7 @@ import { isAbsolute, join } from "node:path"
 import { TEMPLATES } from "../codegen/templates"
 import { exportReact } from "../codegen/react"
 import { validateDocument, validateFields } from "../schema/validate"
+import { buildShareUrl } from "../share/codec"
 import type { Field, KiTheme } from "../types"
 import { generateFiles, pascalCase, pickTemplate, resolveAdd, slugify, type AddOptions, type TemplateId } from "./scaffold"
 
@@ -44,6 +45,7 @@ Usage
   ki-forms list              List the available templates
   ki-forms validate <file>   Validate a ki-forms schema or document JSON
   ki-forms export <file>     Print a ready-to-paste React component
+  ki-forms share <file>      Print a shareable Studio link (no server involved)
   ki-forms help              Show this help
 
 Add options
@@ -68,11 +70,24 @@ Export options
   --endpoint <url>           Endpoint to bake in (overrides the file)
   --out <file>               Write to a file instead of stdout
 
+Share options
+  --origin <url>             Studio base URL (default: the published Studio)
+  --out <file>               Write the link to a file instead of stdout
+
 Examples
   npx ki-forms add "waitlist form"
   npx ki-forms add "job application" --zod --dir src/app/forms
   npx ki-forms validate form.schema.json
-  npx ki-forms export form.schema.json --component Signup --zod`
+  npx ki-forms export form.schema.json --component Signup --zod
+  npx ki-forms share form.schema.json
+
+Agents
+  ki-forms-mcp               MCP stdio server. Add to an MCP client config:
+
+    { "mcpServers": { "ki-forms": { "command": "npx",
+      "args": ["-y", "ki-forms-mcp"] } } }
+
+  Tools: validate_schema, list_templates, scaffold_form, export_component.`
 
 /**
  * Run a parse/resolution step, reporting failures without exiting.
@@ -225,6 +240,60 @@ function commandAdd(argv: string[], io: CliIo): number {
 
 type LoadedSchema = { fields: Field[]; theme?: KiTheme; variant?: "classic" | "conversational"; endpoint?: string; name?: string }
 
+/**
+ * Print a shareable link for a schema file.
+ *
+ * The whole document travels in the URL fragment, so the link never reaches a
+ * server — no account, no backend, and nothing to leak.
+ */
+async function commandShare(argv: string[], io: CliIo): Promise<number> {
+  const parsed = attempt(
+    () =>
+      parseArgs({
+        args: argv,
+        allowPositionals: true,
+        options: { origin: { type: "string" }, out: { type: "string" } },
+      }),
+    io,
+  )
+  if (!parsed.ok) return EXIT_USAGE
+  const { values, positionals } = parsed.value
+  const file = positionals[0]
+  if (!file) {
+    io.error("Usage: ki-forms share <file> [--origin <studio-url>]")
+    return EXIT_USAGE
+  }
+
+  const schema = loadSchema(file, io)
+  if (!schema) return EXIT_ERROR
+
+  const origin = (requireValue(values, "origin") ?? "https://kadirulislam.github.io/ki-forms/studio/").replace(/\/$/, "")
+  const document = {
+    version: 1 as const,
+    ...(schema.name ? { name: schema.name } : {}),
+    fields: schema.fields,
+    ...(schema.theme && Object.keys(schema.theme).length > 0 ? { theme: schema.theme } : {}),
+    ...(schema.variant ? { variant: schema.variant } : {}),
+    ...(schema.endpoint ? { endpoint: schema.endpoint } : {}),
+  }
+
+  const result = await buildShareUrl(document, origin, "/")
+  if (!result.ok) {
+    io.error(result.error)
+    return EXIT_ERROR
+  }
+
+  const out = requireValue(values, "out")
+  if (out) {
+    io.ensureDir(out.includes("/") || out.includes("\\") ? out.replace(/[\\/][^\\/]*$/, "") : ".")
+    io.writeTextFile(out, `${result.payload}\n`)
+    io.log(`Wrote ${out}`)
+  } else {
+    io.log(result.payload)
+  }
+  return EXIT_OK
+}
+
 function loadSchema(path: string, io: CliIo): LoadedSchema | null {
   if (!io.exists(path)) {
     io.error(`File not found: ${path}`)
@@ -232,7 +301,9 @@ function loadSchema(path: string, io: CliIo): LoadedSchema | null {
   }
   let raw: unknown
   try {
-    raw = JSON.parse(io.readTextFile(path))
+    // Strip a UTF-8 BOM: Windows editors and PowerShell's `Out-File -Encoding
+    // utf8` write one, and JSON.parse rejects it. A schema file is still valid.
+    raw = JSON.parse(io.readTextFile(path).replace(/^\uFEFF/, ""))
   } catch (error) {
     io.error(`${path} is not valid JSON: ${(error as Error).message}`)
     return null
@@ -341,7 +412,14 @@ function version(): string {
   return typeof __KI_FORMS_VERSION__ === "string" ? __KI_FORMS_VERSION__ : "dev"
 }
 
-export function runCli(argv: string[], io: CliIo): number {
+/**
+ * Run a command.
+ *
+ * Returns a number for every synchronous command. `share` is asynchronous
+ * (compression is async) and returns a promise, so the return type is a union
+ * rather than making every command — and every existing caller — await.
+ */
+export function runCli(argv: string[], io: CliIo): number | Promise<number> {
   const [command, ...rest] = argv
 
   if (!command || command === "help" || command === "--help" || command === "-h") {
@@ -362,6 +440,8 @@ export function runCli(argv: string[], io: CliIo): number {
       return commandValidate(rest, io)
     case "export":
       return commandExport(rest, io)
+    case "share":
+      return commandShare(rest, io)
     default:
       io.error(`Unknown command "${command}"`)
       io.error("Run `ki-forms help` for usage.")

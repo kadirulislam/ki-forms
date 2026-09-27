@@ -230,6 +230,83 @@ describe("studio app (shadcn rebuild)", () => {
     })
   })
 
+  it("opens a shared form from a #ki=v1 link on an empty canvas", async () => {
+    const { buildShareUrl } = await import("../src/share/codec")
+    const { TEMPLATES } = await import("../studio/lib/templates")
+    const tpl = TEMPLATES.find((t) => t.id === "contact")!
+    const built = await buildShareUrl(
+      { version: 1, name: "Shared contact", fields: tpl.fields as never, variant: "classic" },
+      "https://example.com",
+      "/studio/",
+    )
+    if (!built.ok) throw new Error(built.error)
+    const hash = built.payload.slice(built.payload.indexOf("#"))
+
+    localStorage.setItem("ki-studio-doc-v2", JSON.stringify({ title: "Empty", fields: [], theme: {}, variant: "classic" }))
+    window.history.replaceState(null, "", `/studio/${hash}`)
+
+    render(<App />)
+
+    // The shared document replaced the empty canvas, and the hash was consumed
+    // so a refresh does not re-prompt.
+    await waitFor(() => {
+      const saved = JSON.parse(localStorage.getItem("ki-studio-doc-v2") ?? "{}")
+      expect(saved.fields).toHaveLength(tpl.fields.length)
+      expect(saved.title).toBe("Shared contact")
+    })
+    expect(window.location.hash).toBe("")
+  })
+
+  it("confirms before a shared link replaces existing fields", async () => {
+    const { buildShareUrl } = await import("../src/share/codec")
+    const built = await buildShareUrl({ version: 1, fields: [{ name: "fromLink" }] }, "https://example.com", "/studio/")
+    if (!built.ok) throw new Error(built.error)
+    const hash = built.payload.slice(built.payload.indexOf("#"))
+
+    localStorage.setItem(
+      "ki-studio-doc-v2",
+      JSON.stringify({ title: "Mine", fields: [{ name: "existing" }], theme: {}, variant: "classic" }),
+    )
+    window.history.replaceState(null, "", `/studio/${hash}`)
+
+    render(<App />)
+
+    await waitFor(() => expect(screen.getByText("Open the shared form?")).toBeTruthy())
+    // Nothing applied until confirmed.
+    expect(JSON.parse(localStorage.getItem("ki-studio-doc-v2") ?? "{}").fields[0].name).toBe("existing")
+
+    fireEvent.click(screen.getByRole("button", { name: "Open" }))
+    await waitFor(() => {
+      expect(JSON.parse(localStorage.getItem("ki-studio-doc-v2") ?? "{}").fields[0].name).toBe("fromLink")
+    })
+  })
+
+  it("survives a damaged share link without wiping the document", async () => {
+    localStorage.setItem(
+      "ki-studio-doc-v2",
+      JSON.stringify({ title: "Mine", fields: [{ name: "existing" }], theme: {}, variant: "classic" }),
+    )
+    window.history.replaceState(null, "", "/studio/#ki=v1.definitely-not-valid-deflate")
+
+    render(<App />)
+
+    await waitFor(() => expect(screen.getAllByText(/damaged or incomplete/i).length).toBeGreaterThan(0))
+    // The user's own work is untouched.
+    expect(JSON.parse(localStorage.getItem("ki-studio-doc-v2") ?? "{}").fields[0].name).toBe("existing")
+    // No clobber prompt for something that never parsed.
+    expect(screen.queryByText("Open the shared form?")).toBeNull()
+  })
+
+  it("offers Copy share link in the overflow menu", () => {
+    render(<App />)
+    const trigger = screen.getByRole("button", { name: "More actions" })
+    // Radix opens a dropdown on pointerdown or Enter, not on a plain click.
+    // jsdom has no PointerEvent implementation, so drive it from the keyboard.
+    trigger.focus()
+    fireEvent.keyDown(trigger, { key: "Enter" })
+    expect(screen.getAllByRole("menuitem", { name: /Copy share link/i }).length).toBeGreaterThan(0)
+  })
+
   it("Inspector offers duplicate + delete actions", async () => {
     localStorage.setItem(
       "ki-studio-doc-v2",

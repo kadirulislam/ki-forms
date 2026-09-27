@@ -1,13 +1,14 @@
 {
   "name": "ki-forms",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "description": "Build dynamic React forms from JSON with zero setup.",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "bin": {
-    "ki-forms": "./dist/cli.js"
+    "ki-forms": "./dist/cli.js",
+    "ki-forms-mcp": "./dist/mcp.js"
   },
   "exports": {
     ".": {
@@ -35,6 +36,8 @@
     "build": "tsup src/index.ts src/ki-forms-zod.ts --format esm,cjs --dts --external zod && npm run build:cli",
     "build:cli": "tsup --config tsup.cli.config.ts",
     "cli": "node dist/cli.js",
+    "mcp": "node dist/mcp.js",
+    "smoke:mcp": "node scripts/mcp-smoke.mjs",
     "dev": "tsup src/index.ts --watch",
     "test": "vitest run",
     "test:watch": "vitest",

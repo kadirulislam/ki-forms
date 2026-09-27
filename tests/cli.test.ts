@@ -16,9 +16,14 @@ let cwd: string
 let out: string[]
 let err: string[]
 
-function cli(...args: string[]): number {
+function cli(...args: string[]): number | Promise<number> {
   const io = createIo(cwd, (line) => out.push(line), (line) => err.push(line))
   return runCli(args, io)
+}
+
+/** For the async `share` command, whose compression step returns a promise. */
+async function cliAsync(...args: string[]): Promise<number> {
+  return await cli(...args)
 }
 
 const stdout = () => out.join("\n")
@@ -245,5 +250,47 @@ describe("ki-forms CLI: top level", () => {
     expect(stderr()).toContain('Unknown command "frobnicate"')
     writeFileSync(join(cwd, "f.json"), JSON.stringify(["email"]))
     expect(cli("export", "f.json", "--variant", "sideways")).toBe(EXIT_USAGE)
+  })
+})
+
+describe("ki-forms CLI: share", () => {
+  it("prints a Studio link whose fragment decodes back to the form", async () => {
+    writeFileSync(
+      join(cwd, "f.json"),
+      JSON.stringify({ version: 1, name: "Waitlist", fields: [{ name: "email", type: "email", required: true }] }),
+    )
+    expect(await cliAsync("share", "f.json", "--origin", "https://example.com/studio/")).toBe(EXIT_OK)
+
+    const url = stdout().trim()
+    expect(url.startsWith("https://example.com/studio/#ki=v1.")).toBe(true)
+
+    // The link is self-contained: the fragment alone round-trips the document.
+    const { decodeSharePayload, readSharePayload } = await import("../src/share/codec")
+    const payload = readSharePayload(url.slice(url.indexOf("#")))!
+    expect(payload).toBeTruthy()
+    const decoded = await decodeSharePayload(payload)
+    expect(decoded.ok).toBe(true)
+    if (!decoded.ok) return
+    expect((decoded.doc as { fields: unknown[] }).fields).toEqual([{ name: "email", type: "email", required: true }])
+  })
+
+  it("writes the link to a file with --out", async () => {
+    writeFileSync(join(cwd, "f.json"), JSON.stringify([{ name: "email" }]))
+    expect(await cliAsync("share", "f.json", "--out", "link.txt")).toBe(EXIT_OK)
+    expect(read("link.txt")).toContain("#ki=v1.")
+  })
+
+  it("tolerates a UTF-8 BOM, which Windows editors write", () => {
+    // PowerShell's `Set-Content -Encoding utf8` and many editors prefix a BOM,
+    // and JSON.parse rejects it. The file is still a valid schema.
+    writeFileSync(join(cwd, "bom.json"), `\uFEFF${JSON.stringify([{ name: "email" }])}`, "utf8")
+    expect(cli("validate", "bom.json")).toBe(EXIT_OK)
+  })
+
+  it("refuses an invalid schema and a missing file", async () => {
+    writeFileSync(join(cwd, "bad.json"), JSON.stringify({ fields: [{ name: "a", type: "nope" }] }))
+    expect(await cliAsync("share", "bad.json")).toBe(EXIT_ERROR)
+    expect(await cliAsync("share", "absent.json")).toBe(EXIT_ERROR)
+    expect(await cliAsync("share")).toBe(EXIT_USAGE)
   })
 })

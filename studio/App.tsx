@@ -22,8 +22,9 @@ import { FormPanel } from "./components/FormPanel"
 import { AiPanel } from "./components/AiPanel"
 import { Inspector } from "./components/Inspector"
 import { DocsModal, CodeModal, PreviewOverlay, SheetsModal } from "./components/Modals"
-import { validateSchema } from "./lib/schema"
+import { validateSchema, parseDocumentImportAll, type DocumentImport } from "./lib/schema"
 import { toReactSnippet } from "./lib/export"
+import { buildShareUrl, decodeSharePayload, readSharePayload } from "../src/share/codec"
 import { PREVIEW_SCOPE_VALUE, scopeCustomCss, validateCustomCss } from "./lib/css"
 import { TEMPLATES } from "./lib/templates"
 import type { ShadcnPreset } from "./lib/shadcn-presets"
@@ -50,6 +51,7 @@ import {
   LayoutTemplate,
   Code2,
   Eye,
+  Share2,
   Copy,
   Moon,
   Sun,
@@ -442,6 +444,75 @@ export default function App() {
     [update],
   )
 
+  /**
+   * Build a share link for the current document and copy it.
+   *
+   * The payload lives in the URL fragment, so the link never touches a server —
+   * no account, no backend, nothing to leak.
+   */
+  const copyShareLink = useCallback(async () => {
+    const d = docRef.current
+    const result = await buildShareUrl(
+      {
+        version: 1,
+        ...(d.title ? { name: d.title } : {}),
+        fields: d.fields,
+        theme: d.theme,
+        variant: d.variant,
+        ...(d.endpoint ? { endpoint: d.endpoint } : {}),
+      },
+      window.location.origin,
+      window.location.pathname,
+    )
+    if (!result.ok) {
+      toast.error(result.error)
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(result.payload)
+      toast.success("Share link copied — it works without an account")
+    } catch {
+      toast.error("Could not copy. The link is in the address bar after pressing Share again.")
+    }
+  }, [])
+
+  /**
+   * A shared document waiting for confirmation, when the canvas is not empty.
+   */
+  const [pendingShareDoc, setPendingShareDoc] = useState<DocumentImport | null>(null)
+
+  /**
+   * Read a `#ki=v1.…` fragment on mount.
+   *
+   * The decoded payload is untrusted input: it goes through the canonical
+   * importer before touching the document, and a non-empty canvas confirms
+   * first, matching the template path. Decoding a local fragment is instant,
+   * so there is no loading state and no dialog unless a clobber is possible.
+   */
+  useEffect(() => {
+    const payload = readSharePayload(window.location.hash)
+    if (!payload) return
+    // Consume the hash immediately so a refresh does not re-prompt.
+    window.history.replaceState(null, "", window.location.pathname + window.location.search)
+    void (async () => {
+      const decoded = await decodeSharePayload(payload)
+      if (!decoded.ok) {
+        toast.error(decoded.error)
+        return
+      }
+      const parsed = parseDocumentImportAll(decoded.doc)
+      if (!parsed.ok) {
+        toast.error(`This shared form is invalid: ${parsed.errors[0]}`)
+        return
+      }
+      if (docRef.current.fields.length > 0) {
+        setPendingShareDoc(parsed.doc)
+        return
+      }
+      applyDocument(parsed.doc)
+    })()
+  }, [applyDocument])
+
   const copyReact = useCallback(() => {
     const d = docRef.current
     const snippet = toReactSnippet("MyForm", d.fields, { theme: d.theme, variant: d.variant, endpoint: d.endpoint })
@@ -782,6 +853,9 @@ export default function App() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={copyReact}>
                   <Copy className="mr-2 size-4" /> Copy React code
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={copyShareLink}>
+                  <Share2 className="mr-2 size-4" /> Copy share link
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setModal("sheets")}>
@@ -1124,6 +1198,17 @@ export default function App() {
             if (pendingTemplate) applyTemplate(pendingTemplate)
           }}
           onCancel={() => setPendingTemplate(null)}
+        />
+        <ConfirmApplyDialog
+          open={pendingShareDoc !== null}
+          title="Open the shared form?"
+          description="This replaces every field on the canvas with the shared document. Undo (Ctrl+Z) restores them."
+          confirmLabel="Open"
+          onConfirm={() => {
+            if (pendingShareDoc) applyDocument(pendingShareDoc)
+            setPendingShareDoc(null)
+          }}
+          onCancel={() => setPendingShareDoc(null)}
         />
         {modal === "docs" && <DocsModal onClose={() => setModal("none")} />}
         {modal === "code" && (
