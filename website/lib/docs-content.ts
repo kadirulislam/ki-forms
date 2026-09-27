@@ -219,6 +219,20 @@ export const CODE_MCP_CALL = `// A scaffold call returns the file contents, neve
 }
 // -> { template: "waitlist", files: [{ path, kind, contents }, ...] }`
 
+export const CODE_STUDIO_MENU = `email                    ← the field it acts on
+─────────────────────────────
+✓ Required               context-aware toggle
+  Label              ▸   show / hide
+  Width              ▸   full / half        (radio)
+  Show only when     ▸   one of your other fields
+  Type               ▸   all 11 types      (radio)
+─────────────────────────────
+  Duplicate field
+  Copy field name
+  Move up / Move down     greyed out at the ends
+─────────────────────────────
+  Delete field            destructive`
+
 export const CODE_SHARE_CLI = `# Print a link whose fragment carries the whole form
 npx ki-forms share src/forms/waitlist-form.schema.json
 

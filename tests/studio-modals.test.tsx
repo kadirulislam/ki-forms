@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
-import { CodeModal, PreviewOverlay, SheetsModal, DocsModal } from "../studio/components/Modals"
+import { CodeModal, PreviewOverlay, SheetsModal } from "../studio/components/Modals"
 import { StudioCopyButton, ValidationSummary, ConfirmApplyDialog } from "../studio/components/StudioModal"
 import { DEVICE_CONTENT_WIDTH } from "../studio/components/DeviceFrame"
 
@@ -260,28 +260,5 @@ describe("studio modal primitives", () => {
     const input = screen.getByLabelText("Apps Script web app URL") as HTMLInputElement
     fireEvent.change(input, { target: { value: "https://evil.example/hook" } })
     expect(screen.getByRole("alert").textContent).toContain("Apps Script")
-  })
-
-  it("docs modal searches sections and navigates prev/next", async () => {
-    mockClipboard()
-    render(<DocsModal onClose={vi.fn()} />)
-    // Full handbook present.
-    expect(screen.getByRole("button", { name: "Keyboard shortcuts" })).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Troubleshooting" })).toBeTruthy()
-    // Search filters the nav.
-    const search = screen.getByLabelText("Search documentation") as HTMLInputElement
-    fireEvent.change(search, { target: { value: "endpoint" } })
-    await waitFor(() => expect(screen.queryByRole("button", { name: "Themes" })).toBeNull())
-    expect(screen.getByRole("button", { name: "Responses" })).toBeTruthy()
-    // Clear search, open Conditions via nav, check example + copy.
-    fireEvent.change(search, { target: { value: "" } })
-    fireEvent.click(screen.getByRole("button", { name: "Conditions" }))
-    expect(screen.getByText("Condition examples")).toBeTruthy()
-    expect(screen.getByRole("button", { name: "copy example" })).toBeTruthy()
-    // Prev/next moves through the handbook.
-    fireEvent.click(screen.getByRole("button", { name: /Next:/ }))
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Validation" })).toBeTruthy())
-    fireEvent.click(screen.getByRole("button", { name: /Previous:/ }))
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Conditions" })).toBeTruthy())
   })
 })

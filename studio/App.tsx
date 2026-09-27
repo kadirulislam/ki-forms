@@ -21,14 +21,14 @@ import { StylePanel } from "./components/StylePanel"
 import { FormPanel } from "./components/FormPanel"
 import { AiPanel } from "./components/AiPanel"
 import { Inspector } from "./components/Inspector"
-import { DocsModal, CodeModal, PreviewOverlay, SheetsModal } from "./components/Modals"
+import { CodeModal, PreviewOverlay, SheetsModal } from "./components/Modals"
 import { validateSchema, parseDocumentImportAll, type DocumentImport } from "./lib/schema"
+import { docsHref } from "./lib/docs-url"
 import { toReactSnippet } from "./lib/export"
 import { buildShareUrl, decodeSharePayload, readSharePayload } from "../src/share/codec"
 import { PREVIEW_SCOPE_VALUE, scopeCustomCss, validateCustomCss } from "./lib/css"
 import { TEMPLATES } from "./lib/templates"
 import type { ShadcnPreset } from "./lib/shadcn-presets"
-import { useMinWidth } from "./lib/use-media-query"
 import { Button } from "./components/ui/button"
 import { Separator } from "./components/ui/separator"
 import { Toaster } from "./components/ui/sonner"
@@ -131,7 +131,6 @@ export default function App() {
   const [selected, setSelected] = useState<number | null>(null)
   const [panel, setPanel] = useState<Panel>("blocks")
   const [zoom, setZoom] = useState(100)
-  const [drawerOpen, setDrawerOpen] = useState(false)
   const [drag, setDrag] = useState<
     | { kind: "palette"; fieldType: string }
     | { kind: "card"; index: number; name: string }
@@ -145,7 +144,7 @@ export default function App() {
     }
   })
   const [device, setDevice] = useState<DeviceMode>("desktop")
-  const [modal, setModal] = useState<"none" | "docs" | "code" | "preview" | "sheets">("none")
+  const [modal, setModal] = useState<"none" | "code" | "preview" | "sheets">("none")
   /** Template awaiting confirmation when the canvas is not empty. */
   const [pendingTemplate, setPendingTemplate] = useState<string | null>(null)
   const [dark, setDark] = useState<boolean>(() => {
@@ -158,9 +157,8 @@ export default function App() {
   const [preset, setPreset] = useState<ShadcnPreset | null>(null)
   const [presetDark, setPresetDark] = useState(false)
 
-  const isXl = useMinWidth("xl")
-  const isLg = useMinWidth("lg")
-  const dockInspector = isXl // ≥1280px: inspector is a third column, no overlap
+  // Every panel is docked at every width now, so no width queries gate the
+  // layout. `useMinWidth` is kept for callers that still need a breakpoint.
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -513,6 +511,22 @@ export default function App() {
     })()
   }, [applyDocument])
 
+  /**
+   * Copy a field's name, for pasting into a schema, a condition picker, or code.
+   *
+   * Offered on the canvas context menu because referring to a field by name is
+   * the one thing you constantly need while building a `showIf` or an endpoint
+   * payload, and reading it off a truncated card is the slowest possible way.
+   */
+  const copyFieldName = useCallback((index: number) => {
+    const field = docRef.current.fields[index]
+    if (!field?.name) return
+    navigator.clipboard
+      .writeText(field.name)
+      .then(() => toast.success(`Copied "${field.name}"`))
+      .catch(() => toast.error("Clipboard unavailable"))
+  }, [])
+
   const copyReact = useCallback(() => {
     const d = docRef.current
     const snippet = toReactSnippet("MyForm", d.fields, { theme: d.theme, variant: d.variant, endpoint: d.endpoint })
@@ -585,7 +599,6 @@ export default function App() {
       if (typing) return
       if (e.key === "Escape") {
         setSelected(null)
-        setDrawerOpen(false)
         return
       }
       if (selected !== null && e.key === "Delete") {
@@ -602,12 +615,7 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey)
   }, [undo, redo, selected, duplicateField, deleteField, moveField])
 
-  /** Close the <lg drawer as soon as we have room for the permanent panel. */
-  useEffect(() => {
-    if (isLg) setDrawerOpen(false)
-  }, [isLg])
-
-  /** Persist the lg panel collapse preference. */
+  /** Persist the panel collapse preference so the layout survives a reload. */
   useEffect(() => {
     try {
       localStorage.setItem("ki-studio-panel", panelOpen ? "1" : "0")
@@ -616,11 +624,10 @@ export default function App() {
     }
   }, [panelOpen])
 
-  /** Canvas empty-state CTA: reveal the Templates panel in whichever surface is in use. */
+  /** Canvas empty-state CTA: reveal the Templates panel. */
   const openTemplatesPanel = useCallback(() => {
     setPanel("templates")
     setPanelOpen(true)
-    setDrawerOpen(true)
   }, [])
 
   const railItems: { id: Panel; icon: React.ReactNode; label: string }[] = [
@@ -786,13 +793,16 @@ export default function App() {
               <Code2 className="size-3.5" /> Code
             </Button>
 
+            {/* A real link, not a modal: the docs site is the only copy now. */}
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setModal("docs")}
+              asChild
               className="h-8.5 rounded-lg text-xs font-semibold gap-1.5 hidden md:inline-flex border-border bg-card text-foreground hover:bg-accent hover:text-foreground"
             >
-              <BookOpen className="size-3.5" /> Docs
+              <a href={docsHref()} target="_blank" rel="noreferrer">
+                <BookOpen className="size-3.5" /> Docs
+              </a>
             </Button>
 
             <Button
@@ -845,8 +855,10 @@ export default function App() {
                 <DropdownMenuItem onClick={() => setModal("code")}>
                   <Code2 className="mr-2 size-4" /> Code…
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setModal("docs")}>
-                  <BookOpen className="mr-2 size-4" /> Docs…
+                <DropdownMenuItem asChild>
+                  <a href={docsHref()} target="_blank" rel="noreferrer">
+                    <BookOpen className="mr-2 size-4" /> Documentation
+                  </a>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setModal("preview")}>
                   <Eye className="mr-2 size-4" /> Preview…
@@ -866,11 +878,16 @@ export default function App() {
           </div>
         </header>
 
-        {/* ---------- Workspace Body ---------- */}
-        <div className="flex min-h-0 flex-1">
+        {/* ---------- Workspace Body ----------
+            Both side panels are permanently docked columns. They used to become
+            a modal drawer below `lg` and a floating card on the canvas, which
+            meant the tools you work with kept vanishing and reappearing. The
+            rail, the palette, and the inspector are now always in the layout;
+            the collapse toggles are the only thing that changes their width. */}
+        <div className="flex min-h-0 flex-1 overflow-x-auto">
           {/* Left Navigation Rail */}
           <nav
-            className="hidden w-16 shrink-0 flex-col items-center justify-between border-r border-border/80 bg-sidebar py-4 lg:flex shadow-2xs"
+            className="flex w-16 shrink-0 flex-col items-center justify-between border-r border-border/80 bg-sidebar py-4 shadow-2xs"
             aria-label="Panels"
           >
             {/* Top brand monogram */}
@@ -930,94 +947,50 @@ export default function App() {
             </Tooltip>
           </nav>
 
-          {/* Secondary Left Drawer / Palette Sidebar */}
-          {isLg && (
-            <aside
-              className={
-                "studio-scrollbar flex shrink-0 flex-col border-r border-border/80 bg-sidebar transition-all duration-200 " +
-                (panelOpen ? "w-80" : "w-0 overflow-hidden border-none")
-              }
-            >
-              <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/80 px-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  {railItems.find((r) => r.id === panel)?.label}
-                </span>
-                <div className="flex items-center gap-1">
-                  {panel === "style" && preset && (
-                    <span className="rounded bg-[--studio-accent-subtle] px-2 py-0.5 text-[10px] font-semibold text-[--studio-accent]">
-                      {preset.name}
-                    </span>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Collapse panel"
-                    onClick={() => setPanelOpen(false)}
-                  >
-                    <PanelLeftClose className="size-4 text-muted-foreground" />
-                  </Button>
-                </div>
-              </div>
-              <div className="min-h-0 flex-1 overflow-y-auto p-4 studio-scrollbar">{panelBody}</div>
-            </aside>
-          )}
-
-          {/* Mobile Drawer */}
-          {!isLg && drawerOpen && (
-            <>
-              <div
-                className="fixed inset-0 top-14 z-30 bg-black/40 backdrop-blur-xs"
-                onClick={() => setDrawerOpen(false)}
-                aria-hidden
-              />
-              <div className="fixed bottom-0 left-0 top-14 z-40 flex w-80 max-w-[85vw] flex-col border-r bg-sidebar shadow-2xl">
-                <div className="flex h-12 shrink-0 items-center justify-between border-b px-4">
-                  <span className="text-xs font-bold uppercase tracking-wider text-foreground">
-                    {railItems.find((r) => r.id === panel)?.label}
+          {/* Left palette column — always docked, never a drawer. */}
+          <aside
+            className={
+              "studio-scrollbar flex shrink-0 flex-col border-r border-border/80 bg-sidebar transition-all duration-200 " +
+              (panelOpen ? "w-80" : "w-0 overflow-hidden border-none")
+            }
+          >
+            <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/80 px-4">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                {railItems.find((r) => r.id === panel)?.label}
+              </span>
+              <div className="flex items-center gap-1">
+                {panel === "style" && preset && (
+                  <span className="rounded bg-[--studio-accent-subtle] px-2 py-0.5 text-[10px] font-semibold text-[--studio-accent]">
+                    {preset.name}
                   </span>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Close panel"
-                    onClick={() => setDrawerOpen(false)}
-                  >
-                    <X className="size-4" />
-                  </Button>
-                </div>
-                {/* Five tabs with text labels do not fit a 320-375px drawer, so the
-                    row scrolls instead of clipping the labels. */}
-                <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b px-3 py-2">
-                  {railItems.map((p) => (
-                    <Button
-                      key={p.id}
-                      variant={panel === p.id ? "default" : "ghost"}
-                      size="sm"
-                      className="h-8 flex-1 gap-1.5 px-2 text-xs font-semibold"
-                      style={panel === p.id ? { backgroundColor: "var(--studio-accent)", color: "#ffffff" } : undefined}
-                      aria-pressed={panel === p.id}
-                      onClick={() => setPanel(p.id)}
-                    >
-                      {p.icon}
-                      {p.label}
-                    </Button>
-                  ))}
-                </div>
-                <div className="min-h-0 flex-1 overflow-y-auto p-4">{panelBody}</div>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Collapse panel"
+                  onClick={() => setPanelOpen(false)}
+                >
+                  <PanelLeftClose className="size-4 text-muted-foreground" />
+                </Button>
               </div>
-            </>
-          )}
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 studio-scrollbar">{panelBody}</div>
+          </aside>
 
           {/* Main Canvas Work Area */}
-          <main className="studio-canvas relative min-w-0 flex-1 flex flex-col overflow-hidden" onClick={() => setSelected(null)}>
+          <main className="studio-canvas relative flex min-w-80 flex-1 flex-col overflow-hidden" onClick={() => setSelected(null)}>
             {/* Canvas Sub-Header Bar (Controls) */}
-            <div className="flex h-11 shrink-0 items-center justify-between border-b border-border/80 bg-card/60 backdrop-blur-md px-4 z-10">
+            <div className="flex h-11 shrink-0 items-center justify-between border-b border-border/80 bg-card/60 px-4 backdrop-blur-md z-10">
               <div className="flex items-center gap-2">
+                {/* Doubles as the panel toggle on narrow screens now that there
+                    is no drawer to open. */}
                 <Button
                   variant="outline"
                   size="sm"
-                  className="lg:hidden h-7.5 px-2.5 text-xs gap-1.5"
-                  aria-label="Open panels"
-                  onClick={() => setDrawerOpen(true)}
+                  className="h-7.5 px-2.5 text-xs gap-1.5"
+                  aria-label={panelOpen ? "Collapse panel" : "Open panels"}
+                  aria-pressed={panelOpen}
+                  onClick={() => setPanelOpen((o) => !o)}
                 >
                   <Blocks className="size-3.5" /> Panels
                 </Button>
@@ -1143,34 +1116,22 @@ export default function App() {
                   onMove={moveField}
                   onDuplicate={duplicateField}
                   onDelete={deleteField}
+                  onCopyName={copyFieldName}
+                  onPatch={patchField}
                   onOpenTemplates={openTemplatesPanel}
                 />
               </div>
             </div>
 
             {/* Floating Inspector Panel for smaller screens */}
-            {selectedField && inspectorBody && !dockInspector && (
-              <div
-                data-testid="inspector-panel"
-                className="absolute bottom-6 right-6 top-16 z-20 w-80 overflow-y-auto rounded-2xl border border-border/80 bg-popover/95 p-1 shadow-2xl backdrop-blur-md studio-scrollbar"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="sticky top-0 z-10 flex h-12 items-center justify-between border-b border-border/80 bg-popover/90 px-4 backdrop-blur-md">
-                  <span className="text-xs font-bold uppercase tracking-wider text-foreground">Field settings</span>
-                  <Button variant="ghost" size="icon-sm" aria-label="Close" onClick={() => setSelected(null)}>
-                    <X className="size-4" />
-                  </Button>
-                </div>
-                <div className="p-3">{inspectorBody}</div>
-              </div>
-            )}
           </main>
 
-          {/* Docked Inspector column on extra large screens */}
-          {selectedField && inspectorBody && dockInspector && (
+          {/* Right column. Docked at every width, so the settings for the field
+              you just selected are always where you left them. */}
+          {selectedField && inspectorBody && (
             <aside
               data-testid="inspector-panel"
-              className="flex w-84 shrink-0 flex-col border-l border-border/80 bg-sidebar studio-scrollbar"
+              className="studio-scrollbar flex w-84 shrink-0 flex-col border-l border-border/80 bg-sidebar"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/80 px-4">
@@ -1210,7 +1171,6 @@ export default function App() {
           }}
           onCancel={() => setPendingShareDoc(null)}
         />
-        {modal === "docs" && <DocsModal onClose={() => setModal("none")} />}
         {modal === "code" && (
           <CodeModal
             fields={doc.fields}

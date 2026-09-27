@@ -35,11 +35,15 @@ export const DEVICE_VIEWPORT_LABEL: Record<DeviceKind, string> = {
   mobile: "390 × 844",
 }
 
-/** Screen height shown. Trimmed well below real hardware: a full-height screen
- *  holding a short form reads as mostly empty. Width is what the container
- *  query depends on, so height is free to shrink. */
+/** Screen height shown, in device pixels.
+ *
+ *  Trimmed below real hardware so a short form is not marooned in a mostly-empty
+ *  screen — but not so far that the frame stops reading as the device it claims
+ *  to be. 1280 × 500 is a 2.56:1 letterbox, which looks like a banner, not a
+ *  laptop. 720 keeps a believable 16:9 while still fitting a form comfortably.
+ *  Width is what the container query depends on, so height stays free to tune. */
 const SCREEN_HEIGHT: Record<DeviceKind, number> = {
-  desktop: 500,
+  desktop: 720,
   tablet: 620,
   mobile: 620,
 }

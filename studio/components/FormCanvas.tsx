@@ -22,6 +22,8 @@ import {
   Sparkle,
 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip"
+import { ContextMenu, ContextMenuTrigger } from "./ui/context-menu"
+import { FieldContextMenuContent } from "./FieldContextMenu"
 
 /** Small readonly control preview mirroring the lib's real defaulting and theme styles. */
 export function FieldPreview({ field, theme }: { field: Field; theme?: KiTheme }) {
@@ -130,10 +132,14 @@ type SortableFieldCardProps = {
   total: number
   selected: boolean
   dragActive: boolean
+  /** Patch applied when a context-menu action changes this field. */
   onSelect: () => void
+  onPatch: (patch: Partial<Field>) => void
   onMove: (delta: -1 | 1) => void
   onDuplicate: () => void
   onDelete: () => void
+  onCopyName: () => void
+  allFields: Field[]
 }
 
 function SortableFieldCard({
@@ -144,9 +150,12 @@ function SortableFieldCard({
   selected,
   dragActive,
   onSelect,
+  onPatch,
   onMove,
   onDuplicate,
   onDelete,
+  onCopyName,
+  allFields,
 }: SortableFieldCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: field.name,
@@ -154,17 +163,24 @@ function SortableFieldCard({
   })
 
   return (
-    <div
-      ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={cn(
-        "group relative my-2.5 rounded-xl border transition-all duration-150",
-        selected
-          ? "border-2 border-dashed border-studio-accent bg-studio-accent-subtle shadow-xs"
-          : "border-border/80 bg-card hover:border-border hover:shadow-xs",
-        isDragging && "opacity-25",
-      )}
-    >
+    // Right-click is the affordance drag-and-drop editors use for field-level
+    // actions, and it reuses the very same handlers as the hover action bar —
+    // so the two can never disagree about what "Duplicate" does. Opening the
+    // menu also selects the field, which is what every editor does and what
+    // people expect.
+    <ContextMenu onOpenChange={(open) => open && onSelect()}>
+      <ContextMenuTrigger asChild>
+        <div
+          ref={setNodeRef}
+          style={{ transform: CSS.Transform.toString(transform), transition }}
+          className={cn(
+            "group relative my-2.5 rounded-xl border transition-all duration-150",
+            selected
+              ? "border-2 border-dashed border-studio-accent bg-studio-accent-subtle shadow-xs"
+              : "border-border/80 bg-card hover:border-border hover:shadow-xs",
+            isDragging && "opacity-25",
+          )}
+        >
       {/* Active selection tag pinned at top-right */}
       {selected && (
         <div className="absolute -top-3 right-4 z-20 flex items-center gap-1.5 pointer-events-none">
@@ -246,7 +262,20 @@ function SortableFieldCard({
       >
         <FieldPreview field={field} theme={theme} />
       </div>
-    </div>
+        </div>
+      </ContextMenuTrigger>
+      <FieldContextMenuContent
+        field={field}
+        index={index}
+        total={total}
+        allFields={allFields}
+        onPatch={onPatch}
+        onMove={onMove}
+        onDuplicate={onDuplicate}
+        onDelete={onDelete}
+        onCopyName={onCopyName}
+      />
+    </ContextMenu>
   )
 }
 
@@ -314,6 +343,8 @@ export type FormCanvasProps = {
   onMove: (index: number, delta: -1 | 1) => void
   onDuplicate: (index: number) => void
   onDelete: (index: number) => void
+  onCopyName: (index: number) => void
+  onPatch: (index: number, patch: Partial<Field>) => void
   onOpenTemplates: () => void
 }
 
@@ -328,6 +359,8 @@ export function FormCanvas({
   onMove,
   onDuplicate,
   onDelete,
+  onCopyName,
+  onPatch,
   onOpenTemplates,
 }: FormCanvasProps) {
   const { active } = useDndContext()
@@ -391,9 +424,12 @@ export function FormCanvas({
                 selected={selected === i}
                 dragActive={dragging}
                 onSelect={() => onSelect(i)}
+                onPatch={(patch) => onPatch(i, patch)}
                 onMove={(delta) => onMove(i, delta)}
+                allFields={fields}
                 onDuplicate={() => onDuplicate(i)}
                 onDelete={() => onDelete(i)}
+                onCopyName={() => onCopyName(i)}
               />
             ))}
           </SortableContext>

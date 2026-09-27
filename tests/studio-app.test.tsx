@@ -1,12 +1,13 @@
-import { describe, it, expect, beforeEach } from "vitest"
+import { describe, it, expect, beforeEach, vi } from "vitest"
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react"
 import App from "../studio/App"
 
 /**
  * Studio App shell smoke tests (shadcn rebuild, responsive shell).
- * jsdom reports matchMedia false → the <lg layout renders: the rail + side
- * panel live inside a drawer that must be opened via the "Open panels" button.
- * The canvas renders the real KiForm, so "add field" must produce real inputs.
+ *
+ * Both side panels are permanently docked, so there is no drawer to open and
+ * the rail/panel controls are reachable at any viewport width. The canvas
+ * renders the real KiForm, so "add field" must produce real inputs.
  */
 
 function panelButton(label: string): HTMLElement {
@@ -15,9 +16,25 @@ function panelButton(label: string): HTMLElement {
   return btns[0]
 }
 
-/** jsdom is always <lg: open the panel drawer before touching rail/panel UI. */
+/**
+ * Kept as a no-op call site so the tests read the same as before the panels
+ * became permanently docked. Assert it rather than clicking: if the panel ever
+ * regresses to collapsed-by-default, every panel test should say so plainly
+ * instead of silently clicking a toggle open.
+ */
 function openDrawer() {
-  fireEvent.click(screen.getByRole("button", { name: "Open panels" }))
+  const collapsed = screen.queryByRole("button", { name: "Open panels" })
+  if (collapsed) throw new Error("left panel is collapsed; the docked layout regressed")
+}
+
+/**
+ * `waitFor` keeps its own 1s default, which vitest's `testTimeout` does not
+ * change. A cold mount of the whole Studio App costs 5-6s in jsdom, so anything
+ * waiting on a portal-rendered overlay (a Radix menu) needs room for that —
+ * otherwise the test fails on timing alone and proves nothing.
+ */
+function waitForOverlay<T>(fn: () => T): Promise<T> {
+  return waitFor(fn, { timeout: 6000 })
 }
 
 describe("studio app (shadcn rebuild)", () => {
@@ -25,36 +42,97 @@ describe("studio app (shadcn rebuild)", () => {
     localStorage.clear()
   })
 
-  it("mounts the shell with topbar, drawer rail and canvas", () => {
+  it("mounts the shell with both side panels docked and visible", () => {
     const { container } = render(<App />)
     expect(screen.getByPlaceholderText("Untitled form")).toBeTruthy()
-    // canvas paper present
     expect(container.querySelector(".studio-root")).toBeTruthy()
-    // <lg chrome: drawer trigger + overflow menu
-    expect(panelButton("Open panels")).toBeTruthy()
+    // Overflow menu + the panel toggle, which now collapses rather than opens.
     expect(panelButton("More actions")).toBeTruthy()
-    // open drawer → rail buttons available
-    openDrawer()
+    expect(panelButton("Collapse panel")).toBeTruthy()
+    // The rail and its panels are in the layout immediately — no drawer.
+    expect(screen.queryByRole("button", { name: "Open panels" })).toBeNull()
     expect(panelButton("Templates")).toBeTruthy()
     expect(panelButton("Blocks")).toBeTruthy()
     expect(panelButton("Style")).toBeTruthy()
     expect(panelButton("Form")).toBeTruthy()
+    // The palette column is a sibling of the rail, not a fixed overlay.
+    const rail = screen.getByRole("navigation", { name: "Panels" })
+    const palette = rail.nextElementSibling
+    expect(palette?.tagName).toBe("ASIDE")
+    expect(palette?.className).toContain("w-80")
+    expect(palette?.className).not.toContain("fixed")
   })
 
-  it("opens the in-app documentation guide and switches sections", async () => {
-    render(<App />)
-    fireEvent.click(screen.getByRole("button", { name: "Docs" }))
-
-    expect(screen.getByRole("dialog")).toBeTruthy()
-    expect(screen.getByText(/Choose a template from the Templates panel/i)).toBeTruthy()
-    fireEvent.click(screen.getByRole("button", { name: "Conditions" }))
-    expect(screen.getByText(/Use showIf with field/i)).toBeTruthy()
-    expect(screen.getByRole("link", { name: /Full documentation/i }).getAttribute("href")).toBe(
-      "https://github.com/kadirulislam/ki-forms#readme",
+  /**
+   * One menu per file, deliberately.
+   *
+   * Radix overlays keep module-level state (a `DismissableLayer` stack, the
+   * `hideOthers` aria-hidden bookkeeping) that jsdom never unwinds. Once a
+   * context menu has been opened in a test file, no later menu in that file
+   * will open — not even after an explicit Escape. So this is the single
+   * jsdom test for the menu: it asserts the full item set and the boundary
+   * states in one pass. The mutations each item performs (Duplicate, Delete,
+   * Move) are asserted against real behaviour in headless Chrome instead,
+   * which is also the only place menu positioning can be checked at all.
+   */
+  it("right-clicking a field offers the editor actions, with bounds marked", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true })
+    localStorage.setItem(
+      "ki-studio-doc-v2",
+      JSON.stringify({ title: "T", fields: [{ name: "alpha" }, { name: "beta" }], theme: {}, variant: "classic" }),
     )
+    render(<App />)
 
-    fireEvent.keyDown(document, { key: "Escape" })
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    const card = screen.getByRole("button", { name: "Field alpha" })
+    fireEvent.contextMenu(card)
+    await waitForOverlay(() => expect(screen.getByRole("menu")).toBeTruthy())
+
+    // The menu names the field it acts on.
+    expect(within(screen.getByRole("menu")).getByText("alpha")).toBeTruthy()
+    for (const label of [/Duplicate field/i, /Copy field name/i, /Move up/i, /Move down/i, /Delete field/i]) {
+      expect(screen.getByRole("menuitem", { name: label })).toBeTruthy()
+    }
+    // Context-aware: the choices that need a value are submenus, not toggles.
+    for (const submenu of [/^Label$/, /^Width$/, /^Type$/, /Show only when/i]) {
+      expect(screen.getByRole("menuitem", { name: submenu })).toBeTruthy()
+    }
+    // alpha is the first field, so it cannot move up. Marked disabled rather
+    // than silently doing nothing, so the menu always shows every move.
+    expect(screen.getByRole("menuitem", { name: /Move up/i }).hasAttribute("data-disabled")).toBe(true)
+    expect(screen.getByRole("menuitem", { name: /Move down/i }).hasAttribute("data-disabled")).toBe(false)
+
+    fireEvent.click(screen.getByRole("menuitem", { name: /Copy field name/i }))
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("alpha"))
+  })
+
+  it("resolves the docs URL from wherever the Studio is served", async () => {
+    const { resolveDocsUrl } = await import("../studio/lib/docs-url")
+    // The published layout: docs app at /ki-forms/, Studio in a subdirectory.
+    expect(resolveDocsUrl("https://kadirulislam.github.io", "/ki-forms/studio/")).toBe(
+      "https://kadirulislam.github.io/ki-forms/#/docs/getting-started",
+    )
+    // A direct hit on index.html must resolve to the same place.
+    expect(resolveDocsUrl("https://kadirulislam.github.io", "/ki-forms/studio/index.html")).toBe(
+      "https://kadirulislam.github.io/ki-forms/#/docs/getting-started",
+    )
+    // Studio at the domain root.
+    expect(resolveDocsUrl("https://forms.example.com", "/studio")).toBe(
+      "https://forms.example.com/#/docs/getting-started",
+    )
+    // Dev runs the docs site on its own port.
+    expect(resolveDocsUrl("http://localhost:5173", "/", true)).toBe("http://localhost:5174/#/docs/getting-started")
+  })
+
+  it("sends the Docs button to the real documentation, not a modal", () => {
+    render(<App />)
+    // The Studio no longer keeps its own copy of the docs, so there is exactly
+    // one place to keep in sync — and it is the one that gets shipped.
+    const link = screen.getByRole("link", { name: /Docs/i })
+    expect(link.getAttribute("href")).toContain("#/docs/getting-started")
+    expect(link.getAttribute("target")).toBe("_blank")
+    // No in-app guide is left to open.
+    expect(screen.queryByRole("dialog")).toBeNull()
   })
 
   it("appends a field from the Blocks panel and selects it", async () => {

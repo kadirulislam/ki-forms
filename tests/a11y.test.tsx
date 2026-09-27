@@ -3,7 +3,7 @@ import { useState } from "react"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import axe from "axe-core"
 import { KiForm } from "../src/renderer/KiForm"
-import { DocsModal } from "../studio/components/Modals"
+import { SheetsModal } from "../studio/components/Modals"
 
 /**
  * Accessibility hardening (P2.4.0): axe coverage, focus management,
@@ -146,14 +146,14 @@ describe("accessibility", () => {
       return (
         <>
           <button type="button" onClick={() => setOpen(true)}>
-            open docs
+            open responses
           </button>
-          {open && <DocsModal onClose={() => setOpen(false)} />}
+          {open && <SheetsModal onConnect={vi.fn()} onClose={() => setOpen(false)} />}
         </>
       )
     }
     render(<Harness />)
-    const trigger = screen.getByRole("button", { name: "open docs" })
+    const trigger = screen.getByRole("button", { name: "open responses" })
     trigger.focus()
     fireEvent.click(trigger)
     await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy())

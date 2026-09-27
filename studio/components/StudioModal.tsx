@@ -5,6 +5,7 @@ import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
 import { cn } from "../lib/utils"
 import { Check, Copy, type LucideIcon } from "lucide-react"
+import { useResizable, type ResizableState } from "../lib/use-resizable"
 
 /**
  * Shared Studio modal primitives (P2.4.0 foundation).
@@ -64,15 +65,47 @@ export type StudioModalProps = {
   testId?: string
   /** Extra classes for the dialog panel, e.g. a wider max-width. */
   className?: string
+  /** Adds drag handles and lets the user size the dialog. */
+  resizable?: boolean
+  /** Starting size when `resizable`; the user's size is then remembered. */
+  initialSize?: { width: number; height: number }
+  /** localStorage key for the remembered size. */
+  sizeStorageKey?: string
+  /** Called whenever the size changes, so the caller can offer a reset. */
+  onSizeStateChange?: (state: ResizableState) => void
 }
 
-export function StudioModal({ onClose, title, description, hideHeaderText = false, size = "md", children, testId, className }: StudioModalProps) {
+/** Shared default for resizable dialogs; wide enough for a desktop frame. */
+export const DEFAULT_RESIZABLE_SIZE = { width: 1080, height: 720 }
+
+export function StudioModal({
+  onClose,
+  title,
+  description,
+  hideHeaderText = false,
+  size = "md",
+  children,
+  testId,
+  className,
+  resizable = false,
+  initialSize = DEFAULT_RESIZABLE_SIZE,
+  sizeStorageKey,
+  onSizeStateChange,
+}: StudioModalProps) {
   useStudioEscape(onClose)
   useFocusRestore()
+  // Resizing is a hook, not a conditional: the dialog must not be a different
+  // component tree depending on a prop, or state would reset on every toggle.
+  const resizableState = useResizable(initialSize, resizable ? sizeStorageKey : undefined)
+  useEffect(() => {
+    if (resizable) onSizeStateChange?.(resizableState)
+  }, [resizable, resizableState.size.width, resizableState.size.height, onSizeStateChange])
+
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         data-testid={testId}
+        style={resizable ? resizableState.style : undefined}
         className={cn(
           "flex min-w-0 max-h-[calc(100dvh-1.5rem)] w-full max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden p-0",
           // Never taller than the viewport: `sm:` is a width breakpoint, so a
@@ -88,8 +121,80 @@ export function StudioModal({ onClose, title, description, hideHeaderText = fals
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
         {children}
+        {resizable && <ResizeHandles state={resizableState} />}
       </DialogContent>
     </Dialog>
+  )
+}
+
+/**
+ * Corner + right edge + bottom edge.
+ *
+ * `role="separator"` with an orientation is what makes these discoverable: a
+ * keyboard user can arrow-key a focused separator to resize, and it is the same
+ * affordance a native window uses.
+ */
+function ResizeHandles({ state }: { state: ResizableState }) {
+  const shared = {
+    onPointerMove: state.onPointerMove,
+    onPointerUp: state.onPointerUp,
+  }
+  return (
+    <div data-testid="resize-handles" className="contents">
+      <div
+        role="separator"
+        aria-label="Resize preview width"
+        aria-orientation="vertical"
+        tabIndex={0}
+        onPointerDown={state.startResize("e")}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowRight") state.nudge(32, 0)
+          else if (e.key === "ArrowLeft") state.nudge(-32, 0)
+          else return
+          e.preventDefault()
+        }}
+        className="absolute -right-1 top-10 bottom-2 z-30 w-2 cursor-ew-resize touch-none"
+        {...shared}
+      />
+      <div
+        role="separator"
+        aria-label="Resize preview height"
+        aria-orientation="horizontal"
+        tabIndex={0}
+        onPointerDown={state.startResize("s")}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown") state.nudge(0, 32)
+          else if (e.key === "ArrowUp") state.nudge(0, -32)
+          else return
+          e.preventDefault()
+        }}
+        className="absolute -bottom-1 left-3 right-3 z-30 h-2 cursor-ns-resize touch-none"
+        {...shared}
+      />
+      <div
+        role="separator"
+        aria-label="Resize preview"
+        tabIndex={0}
+        onPointerDown={state.startResize("es")}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowRight" || e.key === "ArrowDown") state.nudge(32, 32)
+          else if (e.key === "ArrowLeft" || e.key === "ArrowUp") state.nudge(-32, -32)
+          else return
+          e.preventDefault()
+        }}
+        className="group absolute -bottom-1 -right-1 z-40 size-5 cursor-nwse-resize touch-none"
+        {...shared}
+      >
+        {/* Diagonal grip, drawn rather than shipped as an image. */}
+        <svg
+          viewBox="0 0 20 20"
+          aria-hidden="true"
+          className="absolute -right-0.5 -bottom-0.5 size-4 text-muted-foreground/40 transition-colors group-hover:text-muted-foreground"
+        >
+          <path d="M5 15 15 5M9 15l6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+        </svg>
+      </div>
+    </div>
   )
 }
 

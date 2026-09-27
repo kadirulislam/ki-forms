@@ -8,8 +8,8 @@ import { PREVIEW_SCOPE_VALUE, scopeCustomCss, validateCustomCss } from "../lib/c
 import { appsScript, diagnoseNoCors } from "../lib/sheets"
 import { Tabs, TabsList, TabsContent } from "./ui/tabs"
 import { Button } from "./ui/button"
-import { Badge } from "./ui/badge"
 import { cn } from "../lib/utils"
+import type { ResizableState } from "../lib/use-resizable"
 import {
   StudioModal,
   ModalBody,
@@ -28,8 +28,6 @@ import {
   Check,
   FileJson,
   FileCode2,
-  BookOpen,
-  ExternalLink,
   RotateCcw,
   Download,
   CheckCheck,
@@ -40,292 +38,11 @@ import {
   Monitor,
   Tablet,
   Smartphone,
+  Maximize2,
 } from "lucide-react"
 
 export { StudioCopyButton as CopyButton }
 export { useStudioEscape as useEscape }
-
-export type DocsModalProps = { onClose: () => void }
-
-type DocsSection = {
-  id: string
-  label: string
-  body: string
-  bullets?: string[]
-  code?: string
-  codeLabel?: string
-  tip?: string
-  tryIt?: string
-}
-
-const DOCS_SECTIONS: DocsSection[] = [
-  {
-    id: "quick-start",
-    label: "Getting started",
-    body: "Choose a template from the Templates panel, edit fields on the canvas, customize the Style and Form panels, preview device widths, then use Code to export. Your work autosaves to this browser.",
-    bullets: [
-      "Templates panel: pick a starting point; every field stays editable.",
-      "Blocks panel: click or drag a block to append it to the canvas.",
-      "Click a canvas card to open Field settings (rename, required, conditions).",
-      "Style panel: theme tokens + shadcn presets — preview and exports stay in sync.",
-      "Form panel: title, classic / conversational variant, endpoint URL.",
-      "Code button: copy Schema JSON or a ready-to-paste React component.",
-    ],
-    tryIt: "Try it: open the Templates panel, load Signup, then press Code → Schema JSON.",
-  },
-  {
-    id: "canvas",
-    label: "Canvas & editing",
-    body: "The canvas renders the real KiForm runtime, so what you see is what your users get — including smart labels, placeholders, and conditional visibility.",
-    bullets: [
-      "Drag cards to reorder (touch supported); ArrowUp / ArrowDown moves the selected field.",
-      "Duplicate (Ctrl+D) and Delete keys work when a field is selected; Escape deselects.",
-      "Undo / Redo covers the last 50 document states; typing is coalesced.",
-      "Empty canvas offers Start from a template, which opens the Templates panel — nothing is lost silently.",
-    ],
-    tip: "Autosave key: ki-studio-doc-v2 in localStorage. Corrupt saves fall back to the Signup template.",
-  },
-  {
-    id: "fields",
-    label: "Field reference",
-    body: "Available blocks: text, email, password, number, tel, url, date, textarea, select, and checkbox. Every field name becomes a submitted value key and must be unique.",
-    bullets: [
-      "String shorthand (\"email\") means a field named email with default text semantics.",
-      "Smart defaults: email / password types inferred, labels generated (firstName → First Name), placeholders added.",
-      "Number fields submit \"\" (not 0) when empty; checkbox submits boolean.",
-      "Select needs a non-empty options array of strings or { label, value }.",
-      "defaultValue must be a JSON-serializable primitive (string, number, boolean).",
-    ],
-    code: `{ name: "email", type: "email", required: true, label: "Email" }\n{ name: "role", options: ["User", "Admin"] }\n{ name: "age", type: "number" }`,
-    codeLabel: "Field examples",
-  },
-  {
-    id: "conditions",
-    label: "Conditions",
-    body: "Use showIf with field plus equals or notEquals. It is the single source of truth: a field with required: true is required exactly when it is visible — no second condition to synchronize. Hidden fields skip validation, including external Zod schemas.",
-    bullets: [
-      "Single: { field, equals } or { field, notEquals } — exactly one of equals / notEquals.",
-      "Groups: all (every condition matches, AND) or any (one match is enough, OR).",
-      "A top-level condition combines with groups via AND.",
-      "Legacy requiredWhen is deprecated compat only — new schemas use showIf + required.",
-    ],
-    code: `showIf: { field: "plan", equals: "Pro" }\n\nshowIf: { all: [\n  { field: "country", equals: "US" },\n  { field: "plan", equals: "Pro" }\n] }`,
-    codeLabel: "Condition examples",
-    tip: "Test conditions in Preview: pick Admin → the dependent field appears and becomes required.",
-  },
-  {
-    id: "validation",
-    label: "Validation",
-    body: "Required validation is derived from showIf + required. Optional length / pattern / range constraints refine non-empty values. External schemas (e.g. Zod via buildZodSchema) are also skipped for hidden fields at runtime.",
-    bullets: [
-      "Visible + required + empty → error; hidden → no error, even if required.",
-      "minLength / maxLength / pattern apply to non-empty text-like values; min / max apply to number fields.",
-      "Constraints never fire on empty values — required owns emptiness, so optional fields stay skippable.",
-      "Field names must be non-empty and unique; types, options, and constraint shapes are validated on import.",
-      "onChange callbacks are application code — they cannot be stored in portable JSON and are reported as export warnings.",
-      "Code modal validates before applying and lists every issue with field paths.",
-    ],
-    code: `{ name: "company", showIf: { field: "role", equals: "Admin" }, required: true }\n{ name: "password", type: "password", minLength: 8 }\n{ name: "age", type: "number", min: 18, max: 120 }`,
-    codeLabel: "Required + constraints",
-  },
-  {
-    id: "themes",
-    label: "Themes",
-    body: "Theme tokens become --ki-* CSS variables on the form element. Defaults match the built-in styles, so no theme means zero visual change.",
-    bullets: [
-      "Tokens: accentColor, borderColor, errorColor, helperColor, radius, surfaceColor, textColor, fontFamily.",
-      "Applying a shadcn preset writes its tokens into the document theme — exports match the preview.",
-      "Toggling Studio dark mode with a preset active flips the preset light/dark tokens too.",
-      "React exports include the theme prop plus import \"ki-forms/styles.css\".",
-    ],
-    code: `theme={{\n  accentColor: "#ea580c",\n  radius: "0.625rem",\n  fontFamily: "system-ui, sans-serif",\n}}`,
-    codeLabel: "Theme prop",
-  },
-  {
-    id: "styling",
-    label: "Styling & CSS",
-    body: "Use field className for field-specific CSS in your application. Theme tokens handle common styling; document-level custom CSS previews scoped and exports separately — never injected by the core runtime.",
-    bullets: [
-      "className styles the field input, not the whole row (layout hooks are a planned wrapperClassName).",
-      "Write custom CSS in the Style panel — the canvas and Preview render it scoped under [data-ki-preview=\"studio\"], so Studio chrome is untouched.",
-      "Export via Code → CSS (copy or Download .css) and paste it into your app stylesheet under your own container.",
-      "Imports carry custom CSS with the document; oversize (>20k chars) or </style> breakouts are rejected, never applied.",
-    ],
-    code: `{ name: "rating", className: "feedback-rating" }\n\n.feedback-rating { border-color: #ea580c; }`,
-    codeLabel: "className example",
-  },
-  {
-    id: "responses",
-    label: "Responses",
-    body: "Add an endpoint in the Form panel to POST { values, meta } as JSON on every valid submit. Works with Formspree, Web3Forms, Basin, automation webhooks, or Google Sheets via Apps Script.",
-    bullets: [
-      "Method POST (default) or PUT, custom headers, re-labelable status line or hideSubmitStatus.",
-      "onSubmit still fires; onSubmitted(result) reports the request outcome.",
-      "Google Sheets flow: paste the generated Apps Script once, deploy as Anyone, connect the /exec URL.",
-      "Security boundary: the endpoint URL is public (browser POST) — never put secrets in it.",
-    ],
-    code: `<KiForm fields={fields} endpoint="https://script.google.com/macros/s/…/exec" />`,
-    codeLabel: "Endpoint usage",
-    tip: "Apps Script can't answer CORS preflights — ki-forms sends those endpoints as text/plain automatically.",
-  },
-  {
-    id: "ai",
-    label: "AI generation",
-    body: "Open the AI panel in the left rail, describe the form, and review the proposed schema before anything touches the canvas. AI proposes — you dispose.",
-    bullets: [
-      "Bring your own key: any OpenAI-compatible /chat/completions endpoint + model name.",
-      "The key lives in sessionStorage only — never the document, localStorage, or share links; requests go straight from your browser to the provider.",
-      "Output is validated with the canonical importer — failures show path-specific errors and nothing is applied.",
-      "Applying over a non-empty canvas asks for confirmation (undoable with Ctrl+Z).",
-      "The formal ki-forms/schema.json backs the prompt contract for reliable output.",
-    ],
-    tryIt: "Try it: AI panel → Waitlist example → Generate schema → Apply to canvas.",
-  },
-  {
-    id: "import-export",
-    label: "Import & export",
-    body: "Schema JSON is portable and editable; the React component is ready to paste into any React 18+ app. Round-trip markers let exported code be pasted back into Studio.",
-    bullets: [
-      "Import accepts a field array or a full document (fields + theme, variant, endpoint).",
-      "Add \"$schema\": \"ki-forms/schema.json\" at the document top level for editor autocomplete and LLM output validation — imports ignore the key.",
-      "Export options: TypeScript / JavaScript, Zod schema, theme, endpoint, hidden schema marker.",
-      "Applying JSON over a non-empty canvas asks for confirmation first.",
-      "Copy importable adds /* ki-forms:schema:start */ … /* ki-forms:schema:end */ for Import code.",
-    ],
-    tryIt: "Try it: Code → React → copy importable → Import code → paste → Import from code.",
-  },
-  {
-    id: "shortcuts",
-    label: "Keyboard shortcuts",
-    body: "Studio shortcuts (skipped while typing in inputs, textareas, selects, or contentEditable).",
-    bullets: [
-      "Ctrl/⌘+Z — Undo; Ctrl/⌘+Shift+Z — Redo.",
-      "Ctrl/⌘+D — Duplicate selected field.",
-      "Delete — Delete selected field; Escape — deselect / close panel / close modal.",
-      "ArrowUp / ArrowDown — Move selected field up / down.",
-    ],
-  },
-  {
-    id: "accessibility",
-    label: "Accessibility",
-    body: "Labels are associated with inputs (IDs + ARIA error wiring); the submit button is theme-aware. Conversational mode announces steps and jumps back to failing fields.",
-    bullets: [
-      "Modals restore focus to the opener and close on Escape.",
-      "Validation summaries use role=alert; copy buttons use aria-live feedback.",
-      "Enter in a textarea inserts a newline instead of advancing (conversational).",
-      "Planned: axe coverage, aria-live submit status, full keyboard-only Studio audit.",
-    ],
-  },
-  {
-    id: "troubleshooting",
-    label: "Troubleshooting",
-    body: "Common fixes without losing work.",
-    bullets: [
-      "Import rejected? Read the field path (e.g. fields[2].showIf) — fix that field and re-apply; the canvas is untouched until success.",
-      "No schema block found? Re-copy with copy importable — plain React has no hidden marker.",
-      "Sheets URL rejected? It must match https://script.google.com/macros/s/…/exec.",
-      "Blank canvas after reload? Check localStorage ki-studio-doc-v2 — corrupt saves fall back to Signup; re-import your last exported JSON.",
-      "Endpoint failing with CORS? Keep Apps Script defaults (no no-cors) and let ki-forms send text/plain.",
-    ],
-  },
-]
-
-export function DocsModal({ onClose }: DocsModalProps) {
-  const [section, setSection] = useState("quick-start")
-  const [query, setQuery] = useState("")
-  const q = query.trim().toLowerCase()
-  const filtered = q
-    ? DOCS_SECTIONS.filter(
-        (s) =>
-          s.label.toLowerCase().includes(q) ||
-          s.body.toLowerCase().includes(q) ||
-          (s.bullets ?? []).some((b) => b.toLowerCase().includes(q)),
-      )
-    : DOCS_SECTIONS
-  const index = DOCS_SECTIONS.findIndex((s) => s.id === section)
-  const current = DOCS_SECTIONS[index] ?? DOCS_SECTIONS[0]
-  const prev = DOCS_SECTIONS[(index - 1 + DOCS_SECTIONS.length) % DOCS_SECTIONS.length]
-  const next = DOCS_SECTIONS[(index + 1) % DOCS_SECTIONS.length]
-
-  return (
-    <StudioModal
-      size="lg"
-      testId="docs-modal"
-      onClose={onClose}
-      title={<span className="flex items-center gap-2"><BookOpen className="size-4 text-studio-accent" /> Schema Studio guide</span>}
-      description="Learn the schema, preview, and export workflow without leaving Studio."
-    >
-        <div className="flex shrink-0 items-center gap-2 border-b p-2">
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search docs… (e.g. showIf, endpoint, shortcuts)"
-            aria-label="Search documentation"
-            className="h-8 min-w-0 flex-1 rounded-md border border-input bg-card px-3 text-xs outline-none focus-visible:border-studio-accent focus-visible:ring-studio-accent/30 focus-visible:ring-[3px]"
-          />
-          {q && (
-            <span className="shrink-0 text-[11px] text-muted-foreground" aria-live="polite">
-              {filtered.length} of {DOCS_SECTIONS.length}
-            </span>
-          )}
-        </div>
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col sm:flex-row">
-          <nav aria-label="Documentation sections" className="flex shrink-0 gap-1 overflow-x-auto border-b p-2 sm:w-44 sm:flex-col sm:border-b-0 sm:border-r sm:p-3">
-            {filtered.length === 0 && (
-              <p className="px-2 py-1.5 text-xs text-muted-foreground">No sections match “{query.trim()}”.</p>
-            )}
-            {filtered.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                aria-current={s.id === section ? "true" : undefined}
-                className={cn("shrink-0 rounded-md px-2.5 py-1.5 text-left text-xs font-medium hover:bg-accent", s.id === section && "bg-accent text-foreground")}
-                onClick={() => setSection(s.id)}
-              >
-                {s.label}
-              </button>
-            ))}
-          </nav>
-          <article aria-live="polite" className="min-h-0 min-w-0 flex-1 overflow-y-auto p-4 text-sm leading-relaxed sm:p-6">
-            <h2 className="mb-2 text-lg font-semibold">{current.label}</h2>
-            <p className="text-muted-foreground">{current.body}</p>
-            {current.bullets && (
-              <ul className="mt-3 list-disc space-y-1.5 pl-5 text-[13px]">
-                {current.bullets.map((b) => (
-                  <li key={b}>{b}</li>
-                ))}
-              </ul>
-            )}
-            {current.code && (
-              <div className="mt-4">
-                <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{current.codeLabel ?? "Example"}</span>
-                  <StudioCopyButton getText={() => current.code ?? ""} label="copy example" />
-                </div>
-                <pre className="overflow-x-auto rounded-md border bg-muted/40 p-3 font-mono text-xs">{current.code}</pre>
-              </div>
-            )}
-            {current.tip && (
-              <p className="mt-3 rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">💡 {current.tip}</p>
-            )}
-            {current.tryIt && (
-              <p className="mt-3 text-xs font-medium text-studio-accent">▶ {current.tryIt}</p>
-            )}
-            <div className="mt-6 flex items-center justify-between gap-2 border-t pt-3">
-              <Button variant="outline" size="sm" onClick={() => setSection(prev.id)} aria-label={`Previous: ${prev.label}`}>
-                ← {prev.label}
-              </Button>
-              <a className="inline-flex items-center gap-1.5 text-xs font-medium text-studio-accent hover:underline" href="https://github.com/kadirulislam/ki-forms#readme" target="_blank" rel="noreferrer">Full documentation <ExternalLink className="size-3" /></a>
-              <Button variant="outline" size="sm" onClick={() => setSection(next.id)} aria-label={`Next: ${next.label}`}>
-                {next.label} →
-              </Button>
-            </div>
-            </article>
-        </div>
-    </StudioModal>
-  )
-}
 
 export type CodeModalProps = {
   fields: Field[]
@@ -754,6 +471,9 @@ const DEVICE_BADGE: Record<PreviewDevice, string> = {
   mobile: "iPhone",
 }
 
+/** Wide and tall enough for a desktop frame without crowding a 1280px screen. */
+const PREVIEW_DEFAULT_SIZE = { width: 1080, height: 720 }
+
 export type PreviewOverlayProps = {
   fields: Field[]
   theme: KiTheme
@@ -764,6 +484,9 @@ export type PreviewOverlayProps = {
   onDeviceChange?: (device: PreviewDevice) => void
   onClose: () => void
 }
+
+/** Remembered per-browser; a preview sized for one screen should survive a reload. */
+const PREVIEW_SIZE_KEY = "ki-studio-preview-size"
 
 export function PreviewOverlay({
   fields,
@@ -776,6 +499,7 @@ export function PreviewOverlay({
   onClose,
 }: PreviewOverlayProps) {
   const [result, setResult] = useState<string | null>(null)
+  const [resizable, setResizable] = useState<ResizableState | null>(null)
   const scopedCss = customCss && validateCustomCss(customCss).ok ? scopeCustomCss(customCss) : ""
 
   return (
@@ -786,30 +510,72 @@ export function PreviewOverlay({
       title="Preview"
       description="The form as your users will see it, inside a device frame."
       className="sm:max-w-[min(96vw,1180px)]"
+      resizable
+      initialSize={PREVIEW_DEFAULT_SIZE}
+      sizeStorageKey={PREVIEW_SIZE_KEY}
+      onSizeStateChange={setResizable}
     >
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b p-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b px-3 py-2">
         {onDeviceChange && (
-          <div className="flex items-center gap-1" role="group" aria-label="Preview device">
-            {(["desktop", "tablet", "mobile"] as const).map((d) => (
-              <Button
-                key={d}
-                variant={device === d ? "default" : "outline"}
-                size="sm"
-                aria-pressed={device === d}
-                onClick={() => onDeviceChange(d)}
-                className="h-8 gap-1.5 px-2.5 text-xs"
-              >
-                {d === "desktop" ? <Monitor className="size-3.5" /> : d === "tablet" ? <Tablet className="size-3.5" /> : <Smartphone className="size-3.5" />}
-                <span className="hidden sm:inline">{d[0].toUpperCase() + d.slice(1)}</span>
-              </Button>
-            ))}
+          // One bordered group with the active segment filled reads as a single
+          // control. Three separate outline buttons read as three controls and
+          // gave the toolbar a busy, dated look.
+          <div
+            role="group"
+            aria-label="Preview device"
+            className="flex items-center gap-0.5 rounded-lg border border-border/80 bg-muted/50 p-0.5"
+          >
+            {(["desktop", "tablet", "mobile"] as const).map((d) => {
+              const active = device === d
+              const Icon = d === "desktop" ? Monitor : d === "tablet" ? Tablet : Smartphone
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => onDeviceChange(d)}
+                  title={DEVICE_VIEWPORT_LABEL[d]}
+                  className={cn(
+                    "flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors",
+                    active ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Icon className="size-3.5" />
+                  <span className="hidden sm:inline">{d[0].toUpperCase() + d.slice(1)}</span>
+                </button>
+              )
+            })}
           </div>
         )}
-        <Badge variant="secondary">{DEVICE_BADGE[device]}</Badge>
-        <span className="text-[11px] text-muted-foreground">{DEVICE_VIEWPORT_LABEL[device]}</span>
-        <Badge variant="secondary">{variant === "conversational" ? "Conversational" : "Classic"}</Badge>
-        {endpoint && <Badge variant="secondary">endpoint ✓</Badge>}
-        {scopedCss !== "" && <Badge variant="secondary">custom CSS ✓</Badge>}
+
+        {/* Separate elements, not one joined string: each stays independently
+            queryable, and the frame name and the viewport size are different
+            kinds of fact. */}
+        <span className="text-[11px] text-muted-foreground">{DEVICE_BADGE[device]}</span>
+        <span className="text-[11px] text-muted-foreground/70">{DEVICE_VIEWPORT_LABEL[device]}</span>
+
+        {/* Everything else is state, not control: muted, small, and out of the way. */}
+        <div className="ml-auto flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <span className="hidden sm:inline">{variant === "conversational" ? "Conversational" : "Classic"}</span>
+          {endpoint && (
+            <span className="flex items-center gap-1">
+              <Check className="size-3 text-studio-accent" style={{ color: "var(--studio-accent)" }} />
+              endpoint
+            </span>
+          )}
+          {scopedCss !== "" && (
+            <span className="flex items-center gap-1">
+              <Check className="size-3 text-studio-accent" style={{ color: "var(--studio-accent)" }} />
+              custom CSS
+            </span>
+          )}
+          {resizable?.isResized && (
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-[11px]" onClick={resizable.reset}>
+              <Maximize2 className="size-3.5" />
+              Reset size
+            </Button>
+          )}
+        </div>
       </div>
 
       {scopedCss !== "" && <style>{scopedCss}</style>}

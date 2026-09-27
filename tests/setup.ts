@@ -34,3 +34,24 @@ if (typeof window !== "undefined" && typeof window.matchMedia !== "function") {
 
 // RTL auto-cleanup requires runner globals; vitest runs without them
 afterEach(() => cleanup())
+
+// Radix modal overlays — the canvas context menu, the dropdowns — render through
+// a focus scope that calls `hideOthers`: while one is open it sets
+// `aria-hidden="true"` on every sibling and `pointer-events: none` on the body.
+// jsdom never tears that down, so the markers leak into the *next* test: the
+// newly opened menu lands inside a subtree still marked aria-hidden, and
+// Testing Library's `getByRole` skips aria-hidden subtrees — so the test fails
+// on leaked state rather than on anything it asserts. Symptom: the first
+// context-menu test in a file passes and every later one cannot find the menu.
+//
+// Only these markers are reset. Running in afterEach means it cannot mask an
+// accessibility defect: axe evaluates during the test, before this point.
+afterEach(() => {
+  // Some suites opt into the node environment (`// @vitest-environment node`),
+  // where there is no DOM at all — hence the guard.
+  if (typeof document === "undefined") return
+  document.body.style.pointerEvents = ""
+  for (const el of Array.from(document.querySelectorAll('[aria-hidden="true"]'))) {
+    el.removeAttribute("aria-hidden")
+  }
+})

@@ -24,6 +24,7 @@ import {
   CODE_MCP_CALL,
   CODE_SHARE_CLI,
   CODE_SHARE_LINK,
+  CODE_STUDIO_MENU,
   CODE_TWO_COLUMN,
   CODE_AUTOFILL,
   CODE_MESSAGES,
@@ -222,6 +223,26 @@ function renderPage(route: string) {
             <li>Copy the component into your application.</li>
             <li>Paste JSON, a full document, or previously exported component code back under Schema JSON / Import code to keep iterating.</li>
           </ol>
+          <h2>Working in it</h2>
+          <p>
+            Both side panels are permanently docked, so the palette and the field settings for whatever you selected are always
+            where you left them. Collapse either one from the rail or the canvas toolbar when you want the width back.
+          </p>
+          <p>
+            <strong>Right-click any field</strong> for the same actions a drag-and-drop editor gives you. The menu is
+            context-aware: it only offers what applies to that field, and anything with more than one possible value opens a
+            submenu instead of a toggle.
+          </p>
+          <CodeBlock code={CODE_STUDIO_MENU} language="text" />
+          <p>
+            Every one of those writes through the same field patch the Inspector uses, so a change made by right-click and one
+            made in the side panel are the same code path and the same undo entry.
+          </p>
+          <p>
+            The Preview dialog is <strong>resizable</strong> — drag its corner or edges, or focus a handle and use the arrow keys.
+            The size is remembered, re-clamped to the viewport when the window shrinks, and restoreable from{" "}
+            <em>Reset size</em>.
+          </p>
           <a className="text-link" href="./studio/">Open Schema Studio →</a>
         </PageShell>
       )
