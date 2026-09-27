@@ -108,6 +108,29 @@ describe("share link reading", () => {
     expect(result.error).toBe("This share link is damaged or incomplete.")
   })
 
+  it("leaves no unhandled rejection behind when a link is damaged", async () => {
+    // Regression. The transform's write was fired with `void writer.write(...)`,
+    // which discards the promise without a catch. A corrupt payload makes zlib
+    // reject, that rejection was orphaned, and it surfaced as an unhandled
+    // error — a console error for users, and a non-zero exit for CI even though
+    // every assertion passed. This listens for the orphan directly.
+    const orphans: unknown[] = []
+    const onUnhandled = (reason: unknown) => orphans.push(reason)
+    process.on("unhandledRejection", onUnhandled)
+
+    try {
+      // Give the stream a beat to reject after the call has already returned.
+      await decodeSharePayload(`${SHARE_KEY}=v1.${Buffer.from("not deflate at all").toString("base64url")}`)
+      await decodeSharePayload(`${SHARE_KEY}=v1.`)
+      await decodeSharePayload(`${SHARE_KEY}=v1.${"A".repeat(64)}`)
+      await new Promise((resolve) => setTimeout(resolve, 50))
+    } finally {
+      process.off("unhandledRejection", onUnhandled)
+    }
+
+    expect(orphans.map(String)).toEqual([])
+  })
+
   it("rejects an empty or foreign payload", async () => {
     const empty = await decodeSharePayload(`${SHARE_KEY}=v1.`)
     expect(empty.ok).toBe(false)

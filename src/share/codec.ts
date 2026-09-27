@@ -51,8 +51,25 @@ function base64UrlToBytes(value: string): Uint8Array {
 
 async function pipeThrough(bytes: Uint8Array, stream: TransformStream<Uint8Array, Uint8Array>): Promise<Uint8Array> {
   const writer = stream.writable.getWriter()
-  void writer.write(bytes)
-  void writer.close()
+  // The write has to be chained, and its rejection has to be handled.
+  //
+  // `void writer.write(bytes)` looks equivalent but is not: `void` discards the
+  // promise without attaching a catch, so when a corrupt payload makes the
+  // transform error (zlib's "invalid code lengths set"), that rejection is
+  // orphaned and surfaces as an *unhandled* rejection. In a browser that is a
+  // console error for anyone opening a damaged link; under a test runner it
+  // fails the run even when every assertion passed — which is exactly how this
+  // reached CI green-on-tests, red-on-exit.
+  //
+  // The error is not swallowed: `reader.read()` below rejects with the same
+  // failure, and the caller turns that into a plain message.
+  const pumped = writer
+    .write(bytes)
+    .then(() => writer.close())
+    .catch(() => {
+      /* surfaced by the read loop instead */
+    })
+
   const chunks: Uint8Array[] = []
   const reader = stream.readable.getReader()
   for (;;) {
@@ -60,6 +77,7 @@ async function pipeThrough(bytes: Uint8Array, stream: TransformStream<Uint8Array
     if (done) break
     if (value) chunks.push(value)
   }
+  await pumped
   let total = 0
   for (const chunk of chunks) total += chunk.length
   const out = new Uint8Array(total)
