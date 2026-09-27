@@ -25,44 +25,53 @@
   --destructive-foreground: #ffffff;
   --border: #e2e8f0;
   --input: #cbd5e1;
-  --ring: #ea580c;
-  --radius: 0.75rem;
+  --ring: #0f172a;
+  --radius: 0.625rem;
   --sidebar: #ffffff;
   --sidebar-foreground: #0f172a;
-  /* Rich terracotta/coral studio accent */
-  --studio-accent: #e05328;
-  --studio-accent-hover: #c9441c;
-  --studio-accent-subtle: rgba(224, 83, 40, 0.1);
-  --studio-accent-border: rgba(224, 83, 40, 0.4);
-  --studio-radius: 0.75rem;
+  /* Slate studio accent.
+     The accent was terracotta, and it had crept onto the brand mark, the
+     active rail icon, the Copy Code button, the selection border, the field
+     badges and the focus ring -- so the loudest thing on screen was the
+     editor, not the form. A neutral slate keeps the selection legible (a dark
+     rule on white is a strong signal) while letting the canvas be the only
+     saturated thing left. The form's own accent is a separate token and is
+     unaffected. */
+  --studio-accent: #0f172a;
+  --studio-accent-hover: #1e293b;
+  --studio-accent-subtle: rgba(15, 23, 42, 0.05);
+  --studio-accent-border: rgba(15, 23, 42, 0.28);
+  --studio-radius: 0.625rem;
 }
 
 .dark {
-  --background: #09090b;
-  --foreground: #f8fafc;
-  --card: #141417;
-  --card-foreground: #f8fafc;
-  --popover: #141417;
-  --popover-foreground: #f8fafc;
-  --primary: #f8fafc;
-  --primary-foreground: #09090b;
-  --secondary: #202024;
-  --secondary-foreground: #f8fafc;
-  --muted: #202024;
+  /* Slate throughout: the previous zinc ramp (#09090b / #141417 / #202024)
+     carried a warm cast that fought the cool neutrals in light mode. */
+  --background: #020617;
+  --foreground: #f1f5f9;
+  --card: #0f172a;
+  --card-foreground: #f1f5f9;
+  --popover: #0f172a;
+  --popover-foreground: #f1f5f9;
+  --primary: #e2e8f0;
+  --primary-foreground: #0f172a;
+  --secondary: #1e293b;
+  --secondary-foreground: #f1f5f9;
+  --muted: #1e293b;
   --muted-foreground: #94a3b8;
-  --accent: #202024;
-  --accent-foreground: #f8fafc;
+  --accent: #1e293b;
+  --accent-foreground: #f1f5f9;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: #2a2a30;
-  --input: #383842;
-  --ring: #ea580c;
-  --sidebar: #0e0e11;
-  --sidebar-foreground: #f8fafc;
-  --studio-accent: #f97316;
-  --studio-accent-hover: #ea580c;
-  --studio-accent-subtle: rgba(249, 115, 22, 0.16);
-  --studio-accent-border: rgba(249, 115, 22, 0.45);
+  --border: #1e293b;
+  --input: #334155;
+  --ring: #e2e8f0;
+  --sidebar: #0b1220;
+  --sidebar-foreground: #f1f5f9;
+  --studio-accent: #e2e8f0;
+  --studio-accent-hover: #f1f5f9;
+  --studio-accent-subtle: rgba(226, 232, 240, 0.08);
+  --studio-accent-border: rgba(226, 232, 240, 0.3);
 }
 
 @theme inline {

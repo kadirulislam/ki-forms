@@ -109,7 +109,7 @@ export function Inspector({ field, otherFields, onChange, onDuplicate, onDelete 
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 border-b border-border/60 bg-sidebar/95 px-3 py-2 backdrop-blur">
+      <div className="sticky top-0 z-10 border-b border-border/60 bg-sidebar/95 px-3 py-1.5">
         <div className="relative">
           <Search
             className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
@@ -121,7 +121,7 @@ export function Inspector({ field, otherFields, onChange, onDuplicate, onDelete 
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search settings..."
             aria-label="Search field settings"
-            className="h-8 w-full rounded-md border border-input bg-card pl-7 pr-2 text-xs outline-none placeholder:text-muted-foreground focus-visible:border-studio-accent focus-visible:ring-studio-accent/25 focus-visible:ring-[3px]"
+            className="h-7 w-full rounded-md border border-input bg-card pl-7 pr-2 text-xs outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/20"
           />
         </div>
       </div>

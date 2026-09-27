@@ -52,7 +52,7 @@ export function PanelSection({
         aria-controls={panelId}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "flex w-full items-center gap-1.5 px-3 py-2.5 text-left transition-colors hover:bg-accent/50",
+          "flex w-full items-center gap-1.5 px-3 py-2 text-left transition-colors hover:bg-accent/50",
           headerClassName,
         )}
       >
@@ -67,7 +67,7 @@ export function PanelSection({
         className={cn("grid transition-[grid-template-rows] duration-200 ease-out", open ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}
       >
         <div className="overflow-hidden">
-          <div className="flex flex-col gap-3 px-3 pb-4 pt-0.5">{children}</div>
+          <div className="flex flex-col gap-2.5 px-3 pb-3 pt-0.5">{children}</div>
         </div>
       </div>
     </section>

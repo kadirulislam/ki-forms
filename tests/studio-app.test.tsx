@@ -60,8 +60,28 @@ describe("studio app (shadcn rebuild)", () => {
     const rail = screen.getByRole("navigation", { name: "Panels" })
     const palette = rail.nextElementSibling
     expect(palette?.tagName).toBe("ASIDE")
-    expect(palette?.className).toContain("w-80")
+    expect(palette?.className).toContain("w-64")
     expect(palette?.className).not.toContain("fixed")
+    // Both panels are narrow on purpose: the canvas is the subject, and 320px +
+    // 336px of chrome was eating it. Pinned so a future width bump is a
+    // deliberate act rather than a drift.
+    expect(screen.getByTestId("inspector-panel").className).toContain("w-72")
+    expect(rail.className).toContain("w-14")
+  })
+
+  it("keeps the blocks palette compact enough to leave the canvas the room", () => {
+    render(<App />)
+    openDrawer()
+    // Ten block types used to be 130px wireframe cards in a 2-up grid. They are
+    // now 32px rows in one column, so the whole palette plus its hint fits
+    // without the panel needing to scroll on a laptop.
+    const palette = screen.getByRole("button", { name: "Blocks" })
+    fireEvent.click(palette)
+    const rows = ["Text", "Email", "Phone", "Number", "Password", "Message", "Dropdown", "Checkbox", "Date", "Website"]
+    for (const label of rows) {
+      const row = screen.getByRole("button", { name: new RegExp(`^${label}$`, "i") })
+      expect(row.className).toContain("h-8")
+    }
   })
 
   it("keeps the right column docked with no field selected, showing the form", () => {

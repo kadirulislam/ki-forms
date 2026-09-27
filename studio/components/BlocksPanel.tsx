@@ -134,6 +134,15 @@ export const BLOCKS: { type: FieldType; label: string; group: "basic" | "choice"
   { type: "date", label: "Date", group: "choice" },
 ]
 
+/**
+ * One palette entry.
+ *
+ * These used to be 130px wireframe cards in a two-column grid, which pushed the
+ * field list and the drag hint off-screen and made the palette the loudest
+ * thing in the editor. A 30px row with a small glyph holds the same ten types
+ * in a third of the height, and once the panel is compact the canvas -- the
+ * thing being worked on -- gets the space back.
+ */
 function PaletteCard({
   block,
   onAdd,
@@ -154,22 +163,22 @@ function PaletteCard({
       {...listeners}
       onClick={() => onAdd(block.type)}
       className={cn(
-        "group relative flex cursor-grab touch-none select-none flex-col items-center justify-between rounded-xl border border-border/80 bg-card p-3 shadow-xs transition-all duration-150",
-        "hover:border-studio-accent hover:shadow-md hover:-translate-y-0.5 active:cursor-grabbing",
-        isDragging && "border-2 border-dashed border-studio-accent bg-studio-accent-subtle opacity-40",
+        "group flex h-8 w-full cursor-grab touch-none select-none items-center gap-2 rounded-md border border-transparent px-2",
+        "text-left transition-colors hover:border-border/70 hover:bg-accent/60 active:cursor-grabbing",
+        isDragging && "border-dashed border-studio-accent bg-studio-accent-subtle opacity-50",
       )}
     >
-      {/* 4-way move handle appearing on hover or drag, matching reference image */}
-      <span aria-hidden="true" className="absolute -right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-background border border-border rounded-full p-0.5 shadow-xs text-muted-foreground pointer-events-none">
-        <Move className="size-3" />
-      </span>
-
-      <span aria-hidden="true" className="flex h-12 w-full items-center justify-center pointer-events-none">
+      <span
+        aria-hidden="true"
+        className="pointer-events-none flex size-5 shrink-0 items-center justify-center text-muted-foreground"
+      >
         <Wireframe type={block.type} active={isDragging} />
       </span>
-      <span className="mt-1 truncate text-xs font-semibold tracking-tight text-foreground/85 group-hover:text-studio-accent transition-colors">
-        {block.label}
-      </span>
+      <span className="truncate text-xs font-medium text-foreground/85">{block.label}</span>
+      <Move
+        aria-hidden="true"
+        className="ml-auto size-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-60"
+      />
     </button>
   )
 }
@@ -190,34 +199,33 @@ export function BlocksPanel({ onAdd }: BlocksPanelProps) {
   const visible = BLOCKS.filter((b) => !q || b.label.toLowerCase().includes(q) || b.type.includes(q))
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Search Blocks with search icon on the right as in the reference image */}
+    <div className="flex flex-col gap-3">
       <div className="relative">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search Blocks"
+          placeholder="Search blocks"
           aria-label="Search blocks"
-          className="h-9 w-full rounded-lg border border-border bg-card/60 px-3 pr-8 text-xs font-medium shadow-xs outline-none placeholder:text-muted-foreground/80 focus-visible:border-studio-accent focus-visible:ring-2 focus-visible:ring-studio-accent/20 transition-all text-foreground"
+          className="h-8 w-full rounded-md border border-input bg-card pl-2.5 pr-7 text-xs outline-none placeholder:text-muted-foreground/80 focus-visible:ring-2 focus-visible:ring-ring/20"
         />
-        <Search className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/70" />
+        <Search className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/70" />
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5">
+      {/* A single column of rows, not a grid of cards: the same ten types in a
+          third of the height, and the panel stops competing with the canvas. */}
+      <div className="flex flex-col gap-0.5">
         {visible.map((b) => (
           <PaletteCard key={b.type} block={b} onAdd={onAdd} />
         ))}
         {visible.length === 0 && (
-          <p className="col-span-2 py-6 text-center text-xs text-muted-foreground">No blocks match “{query}”.</p>
+          <p className="py-6 text-center text-xs text-muted-foreground">No blocks match “{query}”.</p>
         )}
       </div>
 
-      <div className="flex items-start gap-2.5 rounded-xl border border-border/80 bg-accent/40 p-3 text-[11px] leading-relaxed text-muted-foreground">
-        <Info className="mt-0.5 size-3.5 shrink-0 text-studio-accent" style={{ color: "var(--studio-accent)" }} />
-        <span>
-          <strong className="font-semibold text-foreground">Drag & Drop:</strong> Drag blocks onto the canvas or click to append. Grab the move handle on fields to reorder.
-        </span>
-      </div>
+      <p className="mt-auto flex items-start gap-1.5 pt-1 text-[11px] leading-relaxed text-muted-foreground">
+        <Info className="mt-0.5 size-3 shrink-0" />
+        <span>Click to append, or drag onto the canvas.</span>
+      </p>
     </div>
   )
 }

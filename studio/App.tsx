@@ -185,8 +185,15 @@ export default function App() {
       const t = presetDark ? preset.dark : preset.light
       root.style.setProperty("--studio-accent", t.accentColor)
       root.style.setProperty("--studio-radius", t.radius)
+      // Drop the default's inline hover so the stylesheet's own value applies
+      // rather than a leftover from before the preset was chosen.
+      root.style.removeProperty("--studio-accent-hover")
     } else {
-      root.style.setProperty("--studio-accent", dark ? "#f97316" : "#e05328")
+      // Slate, to match the tokens in ui.css. This inline value is what the
+      // page actually resolves — setting it here overrides the stylesheet, so
+      // the two must not drift.
+      root.style.setProperty("--studio-accent", dark ? "#e2e8f0" : "#0f172a")
+      root.style.setProperty("--studio-accent-hover", dark ? "#f1f5f9" : "#1e293b")
       root.style.removeProperty("--studio-radius")
     }
   }, [preset, presetDark, dark])
@@ -696,7 +703,7 @@ export default function App() {
     >
       <div className="studio-root flex h-screen flex-col overflow-hidden font-sans antialiased bg-background text-foreground selection:bg-[--studio-accent]/20 selection:text-[--studio-accent]">
         {/* ---------- Top Navigation Bar ---------- */}
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-3 sm:px-5 text-foreground">
+        <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-card px-3 text-foreground">
           {/* Left section: Title and status */}
           <div className="flex min-w-0 items-center gap-3">
             <button
@@ -889,7 +896,7 @@ export default function App() {
         <div className="flex min-h-0 flex-1 overflow-x-auto">
           {/* Left Navigation Rail */}
           <nav
-            className="flex w-16 shrink-0 flex-col items-center justify-between border-r border-border/80 bg-sidebar py-4 shadow-2xs"
+            className="flex w-14 shrink-0 flex-col items-center justify-between border-r border-border bg-sidebar py-3"
             aria-label="Panels"
           >
             {/* Top brand monogram */}
@@ -912,7 +919,7 @@ export default function App() {
                             setPanel(p.id)
                             if (!panelOpen) setPanelOpen(true)
                           }}
-                          className={`flex size-10 items-center justify-center rounded-xl transition-all duration-150 ${
+                          className={`flex size-9 items-center justify-center rounded-lg transition-colors ${
                             isActive
                               ? "bg-studio-accent text-white shadow-xs"
                               : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -953,11 +960,11 @@ export default function App() {
           <aside
             className={
               "studio-scrollbar flex shrink-0 flex-col border-r border-border/80 bg-sidebar transition-all duration-200 " +
-              (panelOpen ? "w-80" : "w-0 overflow-hidden border-none")
+              (panelOpen ? "w-64" : "w-0 overflow-hidden border-none")
             }
           >
-            <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/80 px-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            <div className="flex h-10 shrink-0 items-center justify-between border-b border-border/80 px-3">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 {railItems.find((r) => r.id === panel)?.label}
               </span>
               <div className="flex items-center gap-1">
@@ -980,9 +987,9 @@ export default function App() {
           </aside>
 
           {/* Main Canvas Work Area */}
-          <main className="studio-canvas relative flex min-w-80 flex-1 flex-col overflow-hidden" onClick={() => setSelected(null)}>
+          <main className="studio-canvas relative flex min-w-72 flex-1 flex-col overflow-hidden" onClick={() => setSelected(null)}>
             {/* Canvas Sub-Header Bar (Controls) */}
-            <div className="flex h-11 shrink-0 items-center justify-between border-b border-border/80 bg-card/60 px-4 backdrop-blur-md z-10">
+            <div className="flex h-10 shrink-0 items-center justify-between border-b border-border/80 bg-card/60 px-3 z-10">
               <div className="flex items-center gap-2">
                 {/* Doubles as the panel toggle on narrow screens now that there
                     is no drawer to open. */}
@@ -1135,10 +1142,10 @@ export default function App() {
               out is worse than no panel at all. */}
           <aside
             data-testid="inspector-panel"
-            className="studio-scrollbar flex w-84 shrink-0 flex-col border-l border-border/80 bg-sidebar"
+            className="studio-scrollbar flex w-72 shrink-0 flex-col border-l border-border bg-sidebar"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border/80 px-4">
+            <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border/80 px-3">
               {/* Breadcrumb, not just a title: in a panel this narrow, knowing
                   *which* field you are editing is the whole point of the header. */}
               <nav aria-label="Editing context" className="flex min-w-0 items-center gap-1.5 text-xs">
