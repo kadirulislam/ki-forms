@@ -739,6 +739,9 @@ export type PreviewOverlayProps = {
 }
 
 export function PreviewOverlay({ fields, theme, variant, endpoint, customCss, device, onClose }: PreviewOverlayProps) {
+  // Container context for the .ki-row collapse rule. Only the preview wrapper is
+  // a container — the library's own .ki-form deliberately is not.
+  const previewContainerStyle = { containerName: "ki-preview", containerType: "inline-size" } as const
   const [result, setResult] = useState<string | null>(null)
   useStudioEscape(onClose)
   useFocusRestore()
@@ -755,6 +758,9 @@ export function PreviewOverlay({ fields, theme, variant, endpoint, customCss, de
         onClick={(e) => e.stopPropagation()}
       >
         {scopedCss !== "" && <style>{scopedCss}</style>}
+        {/* This element is the query container that lets the two-column .ki-row
+            collapse inside a narrow device frame. */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto" style={previewContainerStyle}>
         <div className="flex h-11 shrink-0 items-center gap-2 overflow-x-auto border-b px-3">
           <Badge variant="secondary">{device === "mobile" ? "Mobile · 390px" : "Desktop"}</Badge>
           <Badge variant="secondary">{variant === "conversational" ? "Conversational" : "Classic"}</Badge>
@@ -781,6 +787,7 @@ export function PreviewOverlay({ fields, theme, variant, endpoint, customCss, de
               <pre className="mt-1 overflow-auto font-mono text-xs">{result}</pre>
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>

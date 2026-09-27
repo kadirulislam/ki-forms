@@ -7,6 +7,45 @@
   margin-bottom: 16px;
 }
 
+/* Two-column rows: consecutive fields with width:"half" (2.5.0).
+   The row itself is a grid, so a single-item trailing row spans both columns
+   rather than leaving a hole. */
+.ki-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 16px;
+  align-items: start;
+}
+
+.ki-row[data-stretch-last] > :last-child {
+  grid-column: span 2;
+}
+
+/* Collapse to a single column on narrow viewports. The @container rule targets
+   the Studio preview wrapper, whose fake device width is narrower than the real
+   viewport — a media query alone cannot see that. Deliberately NOT using
+   container-type on .ki-form: layout containment would make it a containing
+   block for absolutely positioned custom fields. */
+@media (max-width: 480px) {
+  .ki-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ki-row[data-stretch-last] > :last-child {
+    grid-column: auto;
+  }
+}
+
+@container ki-preview (max-width: 420px) {
+  .ki-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ki-row[data-stretch-last] > :last-child {
+    grid-column: auto;
+  }
+}
+
 .ki-form {
   font-family: var(--ki-font, inherit);
   color: var(--ki-text, inherit);
@@ -23,6 +62,9 @@
 .ki-input,
 .ki-select {
   width: 100%;
+  /* Without this, `width: 100%` resolves against the content box, so padding
+     and border push a field past its grid column and adjacent halves touch. */
+  box-sizing: border-box;
   padding: 8px 10px;
   font-size: 14px;
   border: 1px solid var(--ki-border, #d1d5db);

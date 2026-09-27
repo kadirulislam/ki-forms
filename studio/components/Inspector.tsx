@@ -133,6 +133,10 @@ export function Inspector({ field, otherFields, onChange, onDuplicate, onDelete 
 
       <Separator />
 
+      <WidthSection field={field} onChange={onChange} />
+
+      <Separator />
+
       <ConditionEditor field={field} otherFields={otherFields} onChange={onChange} />
 
       <Separator />
@@ -171,6 +175,40 @@ function isValidPattern(pattern: string): boolean {
   } catch {
     return false
   }
+}
+
+/**
+ * Row width (2.5.0). Two consecutive "half" fields pair into one row; a lone
+ * trailing half stretches to full width rather than leaving a gap.
+ */
+function WidthSection({ field, onChange }: { field: Field; onChange: (patch: Partial<Field>) => void }) {
+  // A checkbox is a single inline control, so halving it has no useful effect.
+  if (field.type === "checkbox") return null
+  const width = field.width ?? "full"
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label className="text-xs text-muted-foreground">Width</Label>
+      <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Field width">
+        {(["full", "half"] as const).map((value) => (
+          <Button
+            key={value}
+            variant={width === value ? "default" : "outline"}
+            size="sm"
+            role="radio"
+            aria-checked={width === value}
+            onClick={() => onChange({ width: value })}
+            className="h-8 justify-center text-xs"
+          >
+            {value === "full" ? "Full width" : "Half width"}
+          </Button>
+        ))}
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        Two half-width fields in a row share one line, so first name / last name sit side by side. Collapses to one
+        column on narrow screens.
+      </p>
+    </div>
+  )
 }
 
 /** Length / pattern / range constraints (2.4.0). Shown per field type; empty clears. */

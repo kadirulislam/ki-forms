@@ -8,7 +8,7 @@ import { SelectField } from "../fields/Select"
 import { TextareaField } from "../fields/Textarea"
 import { CheckboxField } from "../fields/Checkbox"
 import { themeToCssVars } from "../theme"
-import type { KiFormComponents, KiFormProps, SubmissionState } from "../types"
+import type { Field, FormApi, KiFormComponents, KiFormProps, SubmissionState } from "../types"
 
 const defaultComponents: KiFormComponents = {
   text: InputField,
@@ -170,19 +170,73 @@ function KiFormView(props: KiFormProps & { form: NonNullable<KiFormProps["form"]
       className={["ki-form", props.className].filter(Boolean).join(" ")}
       style={props.theme ? themeToCssVars(props.theme) : undefined}
     >
-      {form.fields.map((field) => (
-        <FieldRenderer
-          key={field.name}
-          field={field}
-          form={form}
-          components={components}
-        />
-      ))}
+      <FieldRows form={form} components={components} />
 
       <ErrorSummary form={form} />
       {submitButton}
       {status}
     </form>
+  )
+}
+
+/**
+ * One rendered item: either a paired row or a standalone field.
+ * `stretch` marks a lone trailing half-width field, which fills its row.
+ */
+type RowItem = { kind: "row"; fields: Field[]; stretchLast: boolean } | { kind: "single"; field: Field }
+
+/**
+ * Group consecutive `width: "half"` fields into two-column rows.
+ *
+ * Absent `width` means "full", so schemas that never mention it group exactly
+ * as before — every field is its own row and the DOM is a flat list.
+ */
+export function groupIntoRows(fields: readonly Field[]): RowItem[] {
+  const items: RowItem[] = []
+  let pending: Field[] = []
+
+  const flush = () => {
+    if (pending.length === 0) return
+    // A trailing half-width field with no partner stretches rather than
+    // leaving a gap that reads as a layout bug.
+    const stretchLast = pending.length % 2 === 1
+    items.push({ kind: "row", fields: pending, stretchLast })
+    pending = []
+  }
+
+  for (const field of fields) {
+    if (field.width === "half") {
+      pending.push(field)
+      if (pending.length === 2) flush()
+    } else {
+      flush()
+      items.push({ kind: "single", field })
+    }
+  }
+  flush()
+  return items
+}
+
+function FieldRows({ form, components }: { form: FormApi; components: KiFormComponents }) {
+  return (
+    <>
+      {groupIntoRows(form.fields).map((item, i) => {
+        if (item.kind === "single") {
+          return <FieldRenderer key={item.field.name} field={item.field} form={form} components={components} />
+        }
+        return (
+          <div
+            key={`row-${item.fields.map((f) => f.name).join("-")}-${i}`}
+            className="ki-row"
+            data-stretch-last={item.stretchLast || undefined}
+          >
+            {item.fields.map((field) => (
+              <FieldRenderer key={field.name} field={field} form={form} components={components} />
+            ))}
+          </div>
+        )
+      })}
+    </>
   )
 }
 

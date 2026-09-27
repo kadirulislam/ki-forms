@@ -18,6 +18,7 @@ export const DOC_PAGES: DocPage[] = [
   { route: "docs/studio", id: "studio", title: "Schema Studio", eyebrow: "Visual authoring", description: "Design visually, export code." },
   { route: "docs/export", id: "export", title: "React export", eyebrow: "Own the code", description: "Deterministic generated components." },
   { route: "docs/endpoints", id: "endpoints", title: "Endpoint submissions", eyebrow: "Collect responses", description: "Public URLs and server proxies." },
+  { route: "docs/layout", id: "layout", title: "Two-column layout", eyebrow: "Field width", description: "Pair fields side by side, collapse on mobile." },
   { route: "docs/styling", id: "styling", title: "Styling and themes", eyebrow: "Visual system", description: "Tokens and field classes." },
   { route: "docs/custom-css", id: "custom-css", title: "Custom CSS", eyebrow: "Scoped preview", description: "Style-panel CSS with scoped export." },
   { route: "docs/ai", id: "ai", title: "AI generation", eyebrow: "Bring your own key", description: "Describe the form, review the schema." },
@@ -108,6 +109,23 @@ export const CODE_JSON_SCHEMA = `{
     { "name": "email", "type": "email", "required": true }
   ]
 }`
+
+export const EXAMPLE_TWO_COLUMN: FieldInput[] = [
+  { name: "firstName", type: "text", label: "First name", width: "half", required: true },
+  { name: "lastName", type: "text", label: "Last name", width: "half", required: true },
+  { name: "email", type: "email", label: "Email", required: true },
+  { name: "phone", type: "tel", label: "Phone", width: "half" },
+  { name: "company", type: "text", label: "Company", width: "half" },
+]
+
+export const CODE_TWO_COLUMN = `const fields = [
+  // Two consecutive width: "half" fields share one row.
+  { name: "firstName", label: "First name", width: "half", required: true },
+  { name: "lastName", label: "Last name", width: "half", required: true },
+  { name: "email", type: "email" },
+  // A half field with no partner below it stretches to full width.
+  { name: "phone", type: "tel", width: "half" }
+]`
 
 export const CODE_AI_PROMPT = `A waitlist form: work email (required), company,
 team size select (1-10, 11-50, 51+), and a referral

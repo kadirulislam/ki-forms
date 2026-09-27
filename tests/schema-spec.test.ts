@@ -148,6 +148,20 @@ describe("ki-form.schema.json", () => {
     expectSchemaValid([{ name: "a", pattern: "(unclosed" }])
   })
 
+  it("validates the two-column width token in both validators", () => {
+    const good = [
+      { name: "firstName", width: "half" },
+      { name: "lastName", width: "half" },
+      { name: "notes", width: "full" },
+    ]
+    expect(validateFields(good).success).toBe(true)
+    expectSchemaValid(good)
+    for (const fields of [[{ name: "a", width: "third" }], [{ name: "a", width: 1 }], [{ name: "a", width: null }]]) {
+      expect(validateFields(fields).success).toBe(false)
+      expectSchemaInvalid(fields)
+    }
+  })
+
   it("accepts full group conditions and string shorthand in both validators", () => {
     const fields = [
       "email",

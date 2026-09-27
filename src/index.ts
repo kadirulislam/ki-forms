@@ -1,6 +1,7 @@
 import "./styles/index.css"
 
 export { useKiForm } from "./core/useKiForm"
+export { groupIntoRows } from "./renderer/KiForm"
 export { KiForm } from "./renderer/KiForm"
 export { InputField } from "./fields/Input"
 export { SelectField } from "./fields/Select"

@@ -84,6 +84,7 @@
         "max": { "type": "number" },
         "className": { "type": "string" },
         "helperText": { "type": "string" },
+        "width": { "enum": ["half", "full"] },
         "onChange": false
       }
     },

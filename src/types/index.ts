@@ -64,6 +64,13 @@ export type Field = {
   helperText?: string
   onChange?: (value: unknown, values: Record<string, unknown>) => void
 
+  /**
+   * Layout width within a row. "full" (the default) is one field per row;
+   * consecutive "half" fields pair up side by side (added in 2.5.0).
+   * Classic variant only — a conversational step shows one field at a time.
+   */
+  width?: "half" | "full"
+
 }
 
 export type FieldValue<T extends Field> =

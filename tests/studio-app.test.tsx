@@ -206,6 +206,30 @@ describe("studio app (shadcn rebuild)", () => {
     })
   })
 
+  it("Inspector exposes a Full/Half width control that reaches the document", async () => {
+    localStorage.setItem(
+      "ki-studio-doc-v2",
+      JSON.stringify({ title: "Width", fields: [{ name: "email", type: "email" }], theme: {}, variant: "classic" }),
+    )
+    render(<App />)
+
+    openDrawer()
+    // The canvas card, not the Blocks palette entry of the same name.
+    fireEvent.click(screen.getByRole("button", { name: "Field email" }))
+    await waitFor(() => expect(screen.getAllByText("Field settings").length).toBeGreaterThan(0))
+
+    // Defaults to full width, and the half choice lands in the persisted doc.
+    expect(screen.getByRole("radio", { name: /Full width/ }).getAttribute("aria-checked")).toBe("true")
+
+    fireEvent.click(screen.getByRole("radio", { name: /Half width/ }))
+    await waitFor(() => expect(screen.getByRole("radio", { name: /Half width/ }).getAttribute("aria-checked")).toBe("true"))
+
+    await waitFor(() => {
+      const saved = JSON.parse(localStorage.getItem("ki-studio-doc-v2") ?? "{}")
+      expect(saved.fields[0].width).toBe("half")
+    })
+  })
+
   it("Inspector offers duplicate + delete actions", async () => {
     localStorage.setItem(
       "ki-studio-doc-v2",

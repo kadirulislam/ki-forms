@@ -34,7 +34,9 @@ function fieldLiteral(field: Field, warnings: ExportWarning[]): string {
   if (field.onChange !== undefined) {
     warnings.push({ field: field.name, message: "onChange is application code and was not exported; wire it up in the generated component." })
   }
-  const isBareText = field.type === "text" && field.label === undefined && field.placeholder === undefined && field.options === undefined && field.defaultValue === undefined && !field.required && field.helperText === undefined && field.className === undefined && field.showIf === undefined
+  // A half-width field must never collapse to the bare string shorthand, or the
+  // width would be silently dropped from the export.
+  const isBareText = field.type === "text" && field.label === undefined && field.placeholder === undefined && field.options === undefined && field.defaultValue === undefined && !field.required && field.helperText === undefined && field.className === undefined && field.showIf === undefined && field.width === undefined
   if (isBareText) return `  ${literal(field.name)},`
   const parts = [`name: ${literal(field.name)}`]
   if (field.type) parts.push(`type: ${literal(field.type)}`)
@@ -50,6 +52,7 @@ function fieldLiteral(field: Field, warnings: ExportWarning[]): string {
   if (field.max !== undefined) parts.push(`max: ${literal(field.max)}`)
   if (field.helperText !== undefined) parts.push(`helperText: ${literal(field.helperText)}`)
   if (field.className !== undefined) parts.push(`className: ${literal(field.className)}`)
+  if (field.width !== undefined) parts.push(`width: ${literal(field.width)}`)
   if (field.showIf) parts.push(showIfLiteral(field))
   return `  { ${parts.join(", ")} },`
 }

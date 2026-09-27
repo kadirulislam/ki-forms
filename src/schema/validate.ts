@@ -45,6 +45,7 @@ function validateFieldObject(field: Record<string, unknown>, path: string, names
   if (field.required !== undefined && typeof field.required !== "boolean") issues.push({ path: `${path}.required`, message: "Required must be boolean" })
   if (field.helperText !== undefined && typeof field.helperText !== "string") issues.push({ path: `${path}.helperText`, message: "Helper text must be a string" })
   if (field.className !== undefined && typeof field.className !== "string") issues.push({ path: `${path}.className`, message: "className must be a string" })
+  if (field.width !== undefined && field.width !== "half" && field.width !== "full") issues.push({ path: `${path}.width`, message: 'width must be "half" or "full"' })
   if (field.minLength !== undefined && (!Number.isInteger(field.minLength) || (field.minLength as number) < 0)) issues.push({ path: `${path}.minLength`, message: "minLength must be a non-negative integer" })
   if (field.maxLength !== undefined && (!Number.isInteger(field.maxLength) || (field.maxLength as number) < 0)) issues.push({ path: `${path}.maxLength`, message: "maxLength must be a non-negative integer" })
   if (typeof field.minLength === "number" && typeof field.maxLength === "number" && field.minLength > field.maxLength) issues.push({ path: `${path}.maxLength`, message: "maxLength must be >= minLength" })

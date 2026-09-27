@@ -28,10 +28,14 @@ export const TEMPLATES: StudioTemplate[] = [
     name: "Contact form",
     description: "Message form with a subject picker",
     fields: [
-      { name: "name", type: "text", placeholder: "Your name", required: true },
-      { name: "email", type: "email", placeholder: "you@company.com", required: true },
-      { name: "subject", type: "select", options: ["General", "Support", "Feedback", "Other"] },
-      { name: "message", type: "textarea", placeholder: "How can we help?", required: true },
+      // Paired halves: name and email share a row (2.5.0 width).
+      { name: "firstName", type: "text", label: "First name", placeholder: "Ada", width: "half", required: true },
+      { name: "lastName", type: "text", label: "Last name", placeholder: "Lovelace", width: "half", required: true },
+      { name: "email", type: "email", label: "Email", placeholder: "you@company.com", required: true },
+      { name: "phone", type: "tel", label: "Phone", placeholder: "+1 (555) 000-0000", width: "half" },
+      { name: "company", type: "text", label: "Company", placeholder: "Acme Inc.", width: "half" },
+      { name: "subject", type: "select", label: "Subject", options: ["General", "Support", "Feedback", "Other"] },
+      { name: "message", type: "textarea", label: "Message", placeholder: "How can we help?", required: true },
     ],
   },
   {

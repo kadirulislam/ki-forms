@@ -12,6 +12,7 @@ import {
   Calendar,
   Check,
   ChevronDown,
+  Columns2,
   Copy,
   Globe,
   GripVertical,
@@ -214,6 +215,14 @@ function SortableFieldCard({
         {field.showIf && (
           <span className="flex items-center gap-1 rounded-md border border-border/80 bg-card px-2 py-0.5 text-[10px] font-medium text-foreground shadow-2xs">
             <Sparkle className="size-2.5 text-studio-accent" style={{ color: "var(--studio-accent)" }} /> condition
+          </span>
+        )}
+        {/* The canvas stays a single-column editing list (drag ordering is
+            vertical), so half-width pairing is surfaced as a chip and shown for
+            real in Preview and in the exported component. */}
+        {field.width === "half" && (
+          <span className="flex items-center gap-1 rounded-md border border-border/80 bg-card px-2 py-0.5 text-[10px] font-medium text-foreground shadow-2xs">
+            <Columns2 className="size-2.5" /> half width
           </span>
         )}
       </div>

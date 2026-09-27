@@ -19,6 +19,8 @@ import {
   CODE_CLI_ADD,
   CODE_CLI_VERIFY,
   CODE_CLI_OUTPUT,
+  CODE_TWO_COLUMN,
+  EXAMPLE_TWO_COLUMN,
   LANDING_SCHEMA,
   LANDING_REACT,
 } from "./lib/docs-content"
@@ -230,6 +232,29 @@ function renderPage(route: string) {
           <p>An endpoint sends <code>{"{ values, meta }"}</code> from the browser.</p>
           <CodeBlock code={CODE_ENDPOINT} />
           <Callout title="Security boundary">The URL is public and must not contain secrets. Use your own server as a proxy for private webhooks or API keys.</Callout>
+        </PageShell>
+      )
+    case "docs/layout":
+      return (
+        <PageShell eyebrow="Field width" title="Two-column layout">
+          <p>
+            Set <code>width: "half"</code> on a field to pair it with the next one. Two consecutive half-width fields share
+            a single row, so first name / last name sit side by side. Omit <code>width</code> (or set{" "}
+            <code>"full"</code>) for a field that keeps the whole line.
+          </p>
+          <CodeBlock code={CODE_TWO_COLUMN} language="js" />
+          <LiveDemo fields={EXAMPLE_TWO_COLUMN} />
+          <h2>Rules</h2>
+          <ul className="list-disc space-y-1.5 pl-5 text-[13px]">
+            <li>Rows form from <em>consecutive</em> halves. A full-width field between two halves breaks the pairing.</li>
+            <li>A trailing half field with no partner stretches to full width rather than leaving a gap.</li>
+            <li>Columns collapse to one below 480px, so a paired row becomes a stacked form on a phone.</li>
+            <li>The conversational variant ignores width — each step shows one field at a time, so there is no row to pair.</li>
+          </ul>
+          <Callout title="Additive by default">
+            <code>width</code> defaults to <code>"full"</code>, so existing schemas and every published form render exactly as
+            before. The property is validated by the canonical validator and the published JSON Schema.
+          </Callout>
         </PageShell>
       )
     case "docs/styling":
