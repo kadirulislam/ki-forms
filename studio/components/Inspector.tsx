@@ -1,12 +1,13 @@
+import { useEffect, useRef, useState } from "react"
 import type { Condition, Field, FieldType, ShowIf } from "../../src/types"
 import { inferAutofill } from "../../src/utils/autocomplete"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Switch } from "./ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
-import { Separator } from "./ui/separator"
 import { Button } from "./ui/button"
-import { Copy, Trash2 } from "lucide-react"
+import { PanelSection } from "./ui/panel-section"
+import { Copy, Search, Trash2 } from "lucide-react"
 
 export type InspectorProps = {
   field: Field
@@ -51,6 +52,39 @@ export function Inspector({ field, otherFields, onChange, onDuplicate, onDelete 
   const hideLabel = field.label === false
   const labelText = hideLabel || typeof field.label !== "string" ? "" : field.label
 
+  // Searching the settings list. Sections advertise extra keywords in their
+  // `data-keywords` attribute; matching ones are force-expanded so a search hit
+  // is never hidden behind a collapsed header. The sections are always mounted
+  // so their own state (and any in-progress input) survives a filter change.
+  const [query, setQuery] = useState("")
+  const sectionsRef = useRef<HTMLDivElement | null>(null)
+  const [matchCount, setMatchCount] = useState<number | null>(null)
+  const q = query.trim().toLowerCase()
+
+  useEffect(() => {
+    const root = sectionsRef.current
+    if (!root) return
+    const sections = Array.from(root.querySelectorAll<HTMLElement>("section[data-section]"))
+    if (q === "") {
+      setMatchCount(null)
+      for (const el of sections) el.style.display = ""
+      return
+    }
+    let count = 0
+    for (const el of sections) {
+      const haystack = `${el.dataset.section ?? ""} ${el.dataset.keywords ?? ""}`.toLowerCase()
+      const match = haystack.includes(q)
+      el.style.display = match ? "" : "none"
+      if (match) {
+        count++
+        // Reveal the hit: collapse must not hide the thing you searched for.
+        const trigger = el.querySelector<HTMLButtonElement>("button[aria-expanded]")
+        if (trigger?.getAttribute("aria-expanded") === "false") trigger.click()
+      }
+    }
+    setMatchCount(count)
+  }, [q])
+
   const setType = (next: FieldType) => {
     const patch: Partial<Field> = { type: next }
     if (next === "select") {
@@ -67,97 +101,139 @@ export function Inspector({ field, otherFields, onChange, onDuplicate, onDelete 
     }
   }
 
+  // "Has something non-default here" drives the dot on a collapsed header, so
+  // a section the user has already customised is still discoverable.
+  const type = field.type || "text"
+  const isTextLike = TEXT_LIKE.includes(type) || type === "number"
+  const conditions = field.showIf !== undefined
+
   return (
-    <div className="flex flex-col gap-4 p-3">
-      <Row label="Name" htmlFor="inspector-name">
-        <Input id="inspector-name" value={field.name} onChange={(e) => onChange({ name: e.target.value })} onBlur={commitName} className="h-8 font-mono text-xs" />
-      </Row>
-
-      <Row label="Type">
-        <Select value={field.type || "text"} onValueChange={(v) => setType(v as FieldType)}>
-          <SelectTrigger className="h-8">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {TYPES.map((t) => (
-              <SelectItem key={t} value={t}>
-                {t}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </Row>
-
-      {field.type === "select" && (
-        <Row label="Options (one per line)">
-          <textarea
-            rows={4}
-            className="flex w-full rounded-md border border-input bg-card text-foreground px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-studio-accent focus-visible:ring-studio-accent/30 focus-visible:ring-[3px]"
-            value={Array.isArray(field.options) ? field.options.map((o) => (typeof o === "string" ? o : o.value)).join("\n") : ""}
-            onChange={(e) =>
-              onChange({
-                options: e.target.value
-                  .split("\n")
-                  .map((s) => s.trim())
-                  .filter((s) => s !== ""),
-              })
-            }
+    <div className="flex flex-col">
+      <div className="sticky top-0 z-10 border-b border-border/60 bg-sidebar/95 px-3 py-2 backdrop-blur">
+        <div className="relative">
+          <Search
+            className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
           />
-        </Row>
-      )}
-
-      {!hideLabel && (
-        <Row label="Label" htmlFor="inspector-label">
-          <Input
-            id="inspector-label"
-            value={labelText}
-            placeholder="(auto from name)"
-            onChange={(e) => onChange({ label: e.target.value })}
-            className="h-8"
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search settings..."
+            aria-label="Search field settings"
+            className="h-8 w-full rounded-md border border-input bg-card pl-7 pr-2 text-xs outline-none placeholder:text-muted-foreground focus-visible:border-studio-accent focus-visible:ring-studio-accent/25 focus-visible:ring-[3px]"
           />
-        </Row>
-      )}
+        </div>
+      </div>
 
-      <CheckRow label="Hide label" checked={hideLabel} onCheckedChange={(v) => onChange({ label: v ? false : undefined })} />
+      <div ref={sectionsRef}>
+        {q === "" ? null : matchCount === 0 ? (
+          <p className="px-3 py-6 text-center text-xs text-muted-foreground">No setting matches “{query.trim()}”.</p>
+        ) : null}
 
-      <Row label="Placeholder" htmlFor="inspector-placeholder">
-        <Input id="inspector-placeholder" value={field.placeholder || ""} onChange={(e) => onChange({ placeholder: e.target.value })} className="h-8" />
-      </Row>
+        <PanelSection title="Content" defaultOpen keywords={["name", "type", "label", "placeholder", "helper", "options"]}>
+          <Row label="Name" htmlFor="inspector-name">
+            <Input id="inspector-name" value={field.name} onChange={(e) => onChange({ name: e.target.value })} onBlur={commitName} className="h-8 font-mono text-xs" />
+          </Row>
 
-      <Row label="Helper text" htmlFor="inspector-helper">
-        <Input id="inspector-helper" value={field.helperText || ""} onChange={(e) => onChange({ helperText: e.target.value })} className="h-8" />
-      </Row>
+          <Row label="Type">
+            <Select value={type} onValueChange={(v) => setType(v as FieldType)}>
+              <SelectTrigger className="h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TYPES.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Row>
 
-      <CheckRow label="Required" checked={!!field.required} onCheckedChange={(v) => onChange({ required: v })} />
+          {field.type === "select" && (
+            <Row label="Options (one per line)">
+              <textarea
+                rows={4}
+                className="flex w-full rounded-md border border-input bg-card px-3 py-2 text-sm outline-none focus-visible:border-studio-accent focus-visible:ring-studio-accent/25 focus-visible:ring-[3px]"
+                value={Array.isArray(field.options) ? field.options.map((o) => (typeof o === "string" ? o : o.value)).join("\n") : ""}
+                onChange={(e) =>
+                  onChange({
+                    options: e.target.value
+                      .split("\n")
+                      .map((s) => s.trim())
+                      .filter((s) => s !== ""),
+                  })
+                }
+              />
+            </Row>
+          )}
 
-      <ValidationSection field={field} onChange={onChange} />
+          {!hideLabel && (
+            <Row label="Label" htmlFor="inspector-label">
+              <Input
+                id="inspector-label"
+                value={labelText}
+                placeholder="(auto from name)"
+                onChange={(e) => onChange({ label: e.target.value })}
+                className="h-8"
+              />
+            </Row>
+          )}
 
-      <Separator />
+          <CheckRow label="Hide label" checked={hideLabel} onCheckedChange={(v) => onChange({ label: v ? false : undefined })} />
 
-      <AutofillSection field={field} onChange={onChange} />
+          <Row label="Placeholder" htmlFor="inspector-placeholder">
+            <Input id="inspector-placeholder" value={field.placeholder || ""} onChange={(e) => onChange({ placeholder: e.target.value })} className="h-8" />
+          </Row>
 
-      <Separator />
+          <Row label="Helper text" htmlFor="inspector-helper">
+            <Input id="inspector-helper" value={field.helperText || ""} onChange={(e) => onChange({ helperText: e.target.value })} className="h-8" />
+          </Row>
+        </PanelSection>
 
-      <WidthSection field={field} onChange={onChange} />
-
-      <Separator />
-
-      <ConditionEditor field={field} otherFields={otherFields} onChange={onChange} />
-
-      <Separator />
-
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm" className="flex-1" onClick={onDuplicate}>
-          <Copy /> Duplicate
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex-1 text-destructive hover:bg-destructive hover:text-white"
-          onClick={onDelete}
+        <PanelSection
+          title="Rules"
+          keywords={["required", "validation", "min", "max", "length", "pattern", "regex"]}
+          active={!!field.required || isTextLike}
         >
-          <Trash2 /> Delete
-        </Button>
+          <CheckRow label="Required" checked={!!field.required} onCheckedChange={(v) => onChange({ required: v })} />
+          <ValidationSection field={field} onChange={onChange} />
+        </PanelSection>
+
+        <PanelSection
+          title="Autofill & messages"
+          keywords={["autofill", "autocomplete", "message", "error", "required message"]}
+          active={field.autoComplete !== undefined || Object.keys(field.messages ?? {}).length > 0}
+        >
+          <AutofillSection field={field} onChange={onChange} />
+        </PanelSection>
+
+        {type !== "checkbox" && (
+          <PanelSection title="Layout" keywords={["width", "half", "full", "column"]} active={field.width === "half"}>
+            <WidthSection field={field} onChange={onChange} />
+          </PanelSection>
+        )}
+
+        <PanelSection title="Logic" keywords={["condition", "showif", "show if", "visible", "all", "any"]} active={conditions}>
+          <ConditionEditor field={field} otherFields={otherFields} onChange={onChange} />
+        </PanelSection>
+
+        <PanelSection title="Actions" keywords={["duplicate", "delete", "remove", "copy"]}>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="flex-1" onClick={onDuplicate}>
+              <Copy /> Duplicate
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 text-destructive hover:bg-destructive hover:text-white"
+              onClick={onDelete}
+            >
+              <Trash2 /> Delete
+            </Button>
+          </div>
+        </PanelSection>
       </div>
     </div>
   )
@@ -197,7 +273,6 @@ function AutofillSection({ field, onChange }: { field: Field; onChange: (patch: 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1.5">
-        <Label className="text-xs text-muted-foreground">Autofill</Label>
         <Input
           id="inspector-autocomplete"
           value={currentToken}
@@ -254,7 +329,6 @@ function WidthSection({ field, onChange }: { field: Field; onChange: (patch: Par
   const width = field.width ?? "full"
   return (
     <div className="flex flex-col gap-1.5">
-      <Label className="text-xs text-muted-foreground">Width</Label>
       <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Field width">
         {(["full", "half"] as const).map((value) => (
           <Button
@@ -286,8 +360,7 @@ function ValidationSection({ field, onChange }: { field: Field; onChange: (patch
   if (!textLike && !numeric) return null
   const patternInvalid = typeof field.pattern === "string" && field.pattern !== "" && !isValidPattern(field.pattern)
   return (
-    <div className="flex flex-col gap-1.5">
-      <Label className="text-xs text-muted-foreground">Validation</Label>
+    <div className="flex flex-col gap-3">
       {textLike && (
         <div className="grid grid-cols-2 gap-1.5">
           <Row label="Min length" htmlFor="inspector-minlength">

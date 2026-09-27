@@ -84,11 +84,14 @@ describe("studio app (shadcn rebuild)", () => {
     // column vanished the moment you clicked the canvas.
     const panel = screen.getByTestId("inspector-panel")
     expect(panel).toBeTruthy()
-    expect(screen.getByText("Form overview")).toBeTruthy()
+    // The header is a breadcrumb: the form, with no field path yet.
+    const crumbs = screen.getByRole("navigation", { name: "Editing context" })
+    expect(crumbs.textContent).toBe("Signup")
 
     // And it must be worth reading: a summary of the actual document, not a
-    // bare "nothing selected" notice.
-    expect(screen.getByText("Signup")).toBeTruthy()
+    // bare "nothing selected" notice. (The title also appears in the breadcrumb,
+    // so this is not an exact-match query.)
+    expect(screen.getAllByText("Signup").length).toBeGreaterThan(0)
     expect(screen.getByText("2 · 2 types")).toBeTruthy()
     expect(screen.getByText("Conversational")).toBeTruthy()
     expect(screen.getByText("1 field shown conditionally")).toBeTruthy()
@@ -100,16 +103,18 @@ describe("studio app (shadcn rebuild)", () => {
   it("swaps the right column to field settings once a field is selected", async () => {
     localStorage.setItem(
       "ki-studio-doc-v2",
-      JSON.stringify({ title: "T", fields: [{ name: "alpha" }], theme: {}, variant: "classic" }),
+      JSON.stringify({ title: "Signup", fields: [{ name: "alpha" }], theme: {}, variant: "classic" }),
     )
     render(<App />)
-    expect(screen.getByText("Form overview")).toBeTruthy()
+    expect(screen.getByRole("navigation", { name: "Editing context" }).textContent).toBe("Signup")
 
     fireEvent.click(screen.getByRole("button", { name: "Field alpha" }))
 
-    await waitForOverlay(() => expect(screen.getByText("Field settings")).toBeTruthy())
-    expect(screen.queryByText("Form overview")).toBeNull()
-    // Now there is something to deselect.
+    // The breadcrumb grows a field segment, which is the cue that you are now
+    // editing one specific field rather than the form.
+    await waitForOverlay(() =>
+      expect(screen.getByRole("navigation", { name: "Editing context" }).textContent).toBe("Signupalpha"),
+    )
     expect(screen.getByRole("button", { name: "Close field settings" })).toBeTruthy()
   })
 
@@ -205,6 +210,68 @@ describe("studio app (shadcn rebuild)", () => {
     expect(validateFields(withCondition).success).toBe(true)
   })
 
+  it("collapses the inspector into sections and can search them", async () => {
+    localStorage.setItem(
+      "ki-studio-doc-v2",
+      JSON.stringify({ title: "T", fields: [{ name: "alpha", type: "text" }], theme: {}, variant: "classic" }),
+    )
+    render(<App />)
+    fireEvent.click(screen.getByRole("button", { name: "Field alpha" }))
+    await waitForOverlay(() => expect(screen.getByRole("navigation", { name: "Editing context" })).toBeTruthy())
+
+    // A panel with 30 always-visible controls reads as noise. Sections are the
+    // fix, so Content starts open and the rest start closed.
+    const headers = screen.getAllByRole("button", { expanded: undefined }).filter((b) => b.hasAttribute("aria-controls"))
+    const sections = screen.getByTestId("inspector-panel").querySelectorAll("section[data-section]")
+    expect(sections.length).toBe(6)
+    const open = Array.from(sections).filter((s) => s.querySelector('button[aria-expanded="true"]'))
+    expect(open.map((s) => s.getAttribute("data-section"))).toEqual(["Content"])
+    expect(headers.length).toBeGreaterThan(0)
+
+    // Expanding reveals the control.
+    const width = screen.getByRole("button", { name: /Layout/ })
+    expect(width.getAttribute("aria-expanded")).toBe("false")
+    fireEvent.click(width)
+    await waitFor(() => expect(width.getAttribute("aria-expanded")).toBe("true"))
+    expect(screen.getByRole("radiogroup", { name: "Field width" })).toBeTruthy()
+  })
+
+  it("searching the inspector hides non-matching sections and opens the hit", async () => {
+    localStorage.setItem(
+      "ki-studio-doc-v2",
+      JSON.stringify({ title: "T", fields: [{ name: "alpha", type: "text" }], theme: {}, variant: "classic" }),
+    )
+    render(<App />)
+    fireEvent.click(screen.getByRole("button", { name: "Field alpha" }))
+    await waitForOverlay(() => expect(screen.getByRole("navigation", { name: "Editing context" })).toBeTruthy())
+
+    const search = screen.getByLabelText("Search field settings")
+    fireEvent.change(search, { target: { value: "half" } })
+
+    // "half" is a Layout keyword: Layout is the only section that should remain,
+    // and it must be revealed rather than left collapsed behind a search hit.
+    await waitFor(() => {
+      const visible = Array.from(document.querySelectorAll("section[data-section]")).filter(
+        (el) => (el as HTMLElement).style.display !== "none",
+      )
+      expect(visible.map((el) => el.getAttribute("data-section"))).toEqual(["Layout"])
+    })
+    expect(screen.getByRole("button", { name: /Layout/ }).getAttribute("aria-expanded")).toBe("true")
+
+    // A miss says so rather than silently showing nothing.
+    fireEvent.change(search, { target: { value: "zzzz" } })
+    await waitFor(() => expect(screen.getByText(/No setting matches/)).toBeTruthy())
+
+    // Clearing restores everything.
+    fireEvent.change(search, { target: { value: "" } })
+    await waitFor(() => {
+      const visible = Array.from(document.querySelectorAll("section[data-section]")).filter(
+        (el) => (el as HTMLElement).style.display !== "none",
+      )
+      expect(visible.length).toBe(6)
+    })
+  })
+
   it("resolves the docs URL from wherever the Studio is served", async () => {
     const { resolveDocsUrl } = await import("../studio/lib/docs-url")
     // The published layout: docs app at /ki-forms/, Studio in a subdirectory.
@@ -246,7 +313,7 @@ describe("studio app (shadcn rebuild)", () => {
     })
     // inspector opens for the new field
     await waitFor(() => {
-      expect(screen.getAllByText("Field settings").length).toBeGreaterThan(0)
+      expect(screen.getByRole("navigation", { name: "Editing context" }).textContent).toContain("emailField")
     })
   })
 
@@ -303,7 +370,7 @@ describe("studio app (shadcn rebuild)", () => {
     openDrawer()
     fireEvent.click(screen.getByRole("button", { name: /^text$/i }))
     await waitFor(() => {
-      expect(screen.getAllByText("Field settings").length).toBeGreaterThan(0)
+      expect(screen.getByRole("navigation", { name: "Editing context" }).textContent).toContain("textField")
     })
     const nameInputs = screen.getAllByLabelText("Name")
     fireEvent.change(nameInputs[0], { target: { value: "full_name" } })
@@ -393,7 +460,7 @@ describe("studio app (shadcn rebuild)", () => {
     openDrawer()
     // The canvas card, not the Blocks palette entry of the same name.
     fireEvent.click(screen.getByRole("button", { name: "Field email" }))
-    await waitFor(() => expect(screen.getAllByText("Field settings").length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getByRole("navigation", { name: "Editing context" }).textContent).toContain("email"))
 
     // Defaults to full width, and the half choice lands in the persisted doc.
     expect(screen.getByRole("radio", { name: /Full width/ }).getAttribute("aria-checked")).toBe("true")

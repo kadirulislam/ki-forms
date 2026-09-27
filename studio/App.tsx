@@ -64,6 +64,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   X,
+  ChevronRight,
   Check,
   ChevronLeft,
   Move,
@@ -1137,10 +1138,18 @@ export default function App() {
             className="studio-scrollbar flex w-84 shrink-0 flex-col border-l border-border/80 bg-sidebar"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/80 px-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                {selectedField ? "Field settings" : "Form overview"}
-              </span>
+            <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border/80 px-4">
+              {/* Breadcrumb, not just a title: in a panel this narrow, knowing
+                  *which* field you are editing is the whole point of the header. */}
+              <nav aria-label="Editing context" className="flex min-w-0 items-center gap-1.5 text-xs">
+                <span className="truncate text-muted-foreground">{doc.title || "Untitled form"}</span>
+                {selectedField && (
+                  <>
+                    <ChevronRight className="size-3 shrink-0 text-muted-foreground/60" />
+                    <span className="truncate font-mono font-medium text-foreground">{selectedField.name}</span>
+                  </>
+                )}
+              </nav>
               {selectedField && (
                 <Button variant="ghost" size="icon-sm" aria-label="Close field settings" onClick={() => setSelected(null)}>
                   <X className="size-4 text-muted-foreground" />
