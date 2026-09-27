@@ -1,6 +1,7 @@
 import type { FieldComponentProps } from "../types"
+import { requiredProps } from "../renderer/fieldConfig"
 
-export function CheckboxField({ field, value, onChange, error }: FieldComponentProps) {
+export function CheckboxField({ field, value, onChange, error, onBlur }: FieldComponentProps) {
   const id = `ki-${field.name}`
   const errorId = `${id}-error`
   const helperId = `${id}-helper`
@@ -14,7 +15,10 @@ export function CheckboxField({ field, value, onChange, error }: FieldComponentP
           checked={!!value}
           aria-invalid={error ? true : undefined}
           aria-describedby={[field.helperText ? helperId : "", error ? errorId : ""].filter(Boolean).join(" ") || undefined}
+          {...requiredProps(field)}
+          autoComplete={field.autoComplete === false ? "off" : field.autoComplete}
           onChange={(e) => onChange(e.target.checked)}
+          onBlur={onBlur}
         />
         <span>{field.label !== false ? field.label : field.name}</span>
       </label>

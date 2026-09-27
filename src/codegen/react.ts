@@ -34,26 +34,49 @@ function fieldLiteral(field: Field, warnings: ExportWarning[]): string {
   if (field.onChange !== undefined) {
     warnings.push({ field: field.name, message: "onChange is application code and was not exported; wire it up in the generated component." })
   }
-  // A half-width field must never collapse to the bare string shorthand, or the
-  // width would be silently dropped from the export.
-  const isBareText = field.type === "text" && field.label === undefined && field.placeholder === undefined && field.options === undefined && field.defaultValue === undefined && !field.required && field.helperText === undefined && field.className === undefined && field.showIf === undefined && field.width === undefined
-  if (isBareText) return `  ${literal(field.name)},`
+  // Collect the properties that make a field non-bare, then decide from that.
+  //
+  // This used to be a hand-maintained `isBareText` boolean listing every
+  // property that disqualifies the string shorthand — a second list that had to
+  // be updated in lockstep with the emitted one, and silently dropped
+  // properties whenever it drifted. `extras` is now the single source: if a
+  // property is not appended here, it cannot affect the decision.
+  const extras: string[] = []
+  // `type: "text"` is the default, so on its own it does not make a field
+  // non-bare. It is still emitted when some other property is present, which is
+  // what `{ name, type: "text", label }` has always produced.
+  if (field.type && field.type !== "text") extras.push(`type: ${literal(field.type)}`)
+  if (field.label !== undefined) extras.push(`label: ${literal(field.label)}`)
+  if (field.placeholder !== undefined) extras.push(`placeholder: ${literal(field.placeholder)}`)
+  if (field.options !== undefined) extras.push(`options: ${optionsLiteral(field.options)}`)
+  if (field.defaultValue !== undefined) extras.push(`defaultValue: ${literal(field.defaultValue)}`)
+  if (field.required) extras.push("required: true")
+  if (field.minLength !== undefined) extras.push(`minLength: ${literal(field.minLength)}`)
+  if (field.maxLength !== undefined) extras.push(`maxLength: ${literal(field.maxLength)}`)
+  if (field.pattern !== undefined) extras.push(`pattern: ${literal(field.pattern)}`)
+  if (field.min !== undefined) extras.push(`min: ${literal(field.min)}`)
+  if (field.max !== undefined) extras.push(`max: ${literal(field.max)}`)
+  if (field.helperText !== undefined) extras.push(`helperText: ${literal(field.helperText)}`)
+  if (field.className !== undefined) extras.push(`className: ${literal(field.className)}`)
+  if (field.width !== undefined) extras.push(`width: ${literal(field.width)}`)
+  if (field.autoComplete !== undefined) extras.push(`autoComplete: ${literal(field.autoComplete)}`)
+  if (field.inputMode !== undefined) extras.push(`inputMode: ${literal(field.inputMode)}`)
+  if (field.messages !== undefined) {
+    const entries = Object.entries(field.messages)
+      .filter(([, v]) => typeof v === "string" && v !== "")
+      .map(([k, v]) => `${k}: ${literal(v)}`)
+    if (entries.length > 0) extras.push(`messages: { ${entries.join(", ")} }`)
+  }
+  if (field.showIf) extras.push(showIfLiteral(field))
+
+  // Nothing but the name: the string shorthand is equivalent and far more
+  // readable. A non-default type is meaningful, so `{ name, type: "email" }`
+  // stays an object — shorthand would render a text input.
+  if (extras.length === 0) return `  ${literal(field.name)},`
+
   const parts = [`name: ${literal(field.name)}`]
   if (field.type) parts.push(`type: ${literal(field.type)}`)
-  if (field.label !== undefined) parts.push(`label: ${literal(field.label)}`)
-  if (field.placeholder !== undefined) parts.push(`placeholder: ${literal(field.placeholder)}`)
-  if (field.options !== undefined) parts.push(`options: ${optionsLiteral(field.options)}`)
-  if (field.defaultValue !== undefined) parts.push(`defaultValue: ${literal(field.defaultValue)}`)
-  if (field.required) parts.push("required: true")
-  if (field.minLength !== undefined) parts.push(`minLength: ${literal(field.minLength)}`)
-  if (field.maxLength !== undefined) parts.push(`maxLength: ${literal(field.maxLength)}`)
-  if (field.pattern !== undefined) parts.push(`pattern: ${literal(field.pattern)}`)
-  if (field.min !== undefined) parts.push(`min: ${literal(field.min)}`)
-  if (field.max !== undefined) parts.push(`max: ${literal(field.max)}`)
-  if (field.helperText !== undefined) parts.push(`helperText: ${literal(field.helperText)}`)
-  if (field.className !== undefined) parts.push(`className: ${literal(field.className)}`)
-  if (field.width !== undefined) parts.push(`width: ${literal(field.width)}`)
-  if (field.showIf) parts.push(showIfLiteral(field))
+  parts.push(...extras)
   return `  { ${parts.join(", ")} },`
 }
 

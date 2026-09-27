@@ -22,6 +22,9 @@ export function FieldRenderer({ field, form, components }: Props) {
     value: form.values[field.name],
     error: form.errors[field.name],
     onChange: (value: any) => form.setValue(field.name, value),
+    // Optional and a no-op unless validateOn="blur", so custom components that
+    // ignore it are unaffected.
+    onBlur: () => form.handleBlur?.(field.name),
   }
 
   return <Component {...props} />

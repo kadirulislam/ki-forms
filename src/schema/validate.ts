@@ -46,6 +46,26 @@ function validateFieldObject(field: Record<string, unknown>, path: string, names
   if (field.helperText !== undefined && typeof field.helperText !== "string") issues.push({ path: `${path}.helperText`, message: "Helper text must be a string" })
   if (field.className !== undefined && typeof field.className !== "string") issues.push({ path: `${path}.className`, message: "className must be a string" })
   if (field.width !== undefined && field.width !== "half" && field.width !== "full") issues.push({ path: `${path}.width`, message: 'width must be "half" or "full"' })
+  if (field.autoComplete !== undefined && field.autoComplete !== false && typeof field.autoComplete !== "string") {
+    issues.push({ path: `${path}.autoComplete`, message: "autoComplete must be a string or false" })
+  }
+  if (field.inputMode !== undefined) {
+    const modes = ["text", "email", "tel", "url", "numeric", "decimal", "search", "none"]
+    if (typeof field.inputMode !== "string" || !modes.includes(field.inputMode)) {
+      issues.push({ path: `${path}.inputMode`, message: `inputMode must be one of: ${modes.join(", ")}` })
+    }
+  }
+  if (field.messages !== undefined) {
+    if (!field.messages || typeof field.messages !== "object" || Array.isArray(field.messages)) {
+      issues.push({ path: `${path}.messages`, message: "messages must be an object" })
+    } else {
+      const keys = ["required", "minLength", "maxLength", "pattern", "min", "max"]
+      for (const [key, value] of Object.entries(field.messages as Record<string, unknown>)) {
+        if (!keys.includes(key)) issues.push({ path: `${path}.messages.${key}`, message: "Unknown message key" })
+        else if (typeof value !== "string") issues.push({ path: `${path}.messages.${key}`, message: "Message must be a string" })
+      }
+    }
+  }
   if (field.minLength !== undefined && (!Number.isInteger(field.minLength) || (field.minLength as number) < 0)) issues.push({ path: `${path}.minLength`, message: "minLength must be a non-negative integer" })
   if (field.maxLength !== undefined && (!Number.isInteger(field.maxLength) || (field.maxLength as number) < 0)) issues.push({ path: `${path}.maxLength`, message: "maxLength must be a non-negative integer" })
   if (typeof field.minLength === "number" && typeof field.maxLength === "number" && field.minLength > field.maxLength) issues.push({ path: `${path}.maxLength`, message: "maxLength must be >= minLength" })

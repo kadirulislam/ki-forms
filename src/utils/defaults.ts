@@ -1,4 +1,5 @@
 import { Field } from "../types"
+import { inferAutofill } from "./autocomplete"
 
 function formatLabel(name: string) {
   return name
@@ -29,6 +30,7 @@ export function applyDefaults(field: Field): Field {
 
   return {
     ...field,
+    ...inferAutofill({ ...field, type: inferredType }),
     type: inferredType,
     label,
     placeholder

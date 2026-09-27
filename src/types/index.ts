@@ -65,12 +65,43 @@ export type Field = {
   onChange?: (value: unknown, values: Record<string, unknown>) => void
 
   /**
+   * HTML `autocomplete` token (added in 2.5.0). Inferred from `type` and
+   * `name` when omitted — browsers otherwise guess, and a wrong guess fills
+   * the wrong value. `false` opts the field out entirely.
+   */
+  autoComplete?: string | false
+  /** Virtual-keyboard hint; inferred alongside `autoComplete` when omitted. */
+  inputMode?: "text" | "email" | "tel" | "url" | "numeric" | "decimal" | "search" | "none"
+
+  /**
+   * Custom validation messages (added in 2.5.0). Plain strings only, so they
+   * stay portable JSON. Anything omitted keeps the generated default.
+   */
+  messages?: FieldMessages
+
+  /**
    * Layout width within a row. "full" (the default) is one field per row;
    * consecutive "half" fields pair up side by side (added in 2.5.0).
    * Classic variant only — a conversational step shows one field at a time.
    */
   width?: "half" | "full"
 
+}
+
+/**
+ * Per-field validation message overrides (2.5.0).
+ *
+ * WCAG 3.3.3 asks a message to *suggest a correction*, not just name the
+ * problem. "Email is required" leaves the user guessing; "Enter your work
+ * email so we can send the invite" does not.
+ */
+export type FieldMessages = {
+  required?: string
+  minLength?: string
+  maxLength?: string
+  pattern?: string
+  min?: string
+  max?: string
 }
 
 export type FieldValue<T extends Field> =
@@ -133,6 +164,11 @@ export type FieldComponentProps<TValue = string | number | boolean> = {
   value: TValue
   error?: string
   onChange: (value: TValue) => void
+  /**
+   * Blur notification, used by `validateOn="blur"` (added in 2.5.0). Optional,
+   * so existing custom field components that ignore it keep working.
+   */
+  onBlur?: () => void
 }
 
 /** Custom renderer map, keyed by field type. */
@@ -154,12 +190,22 @@ export type FormApi<TValues extends FormValues = FormValues> = {
   validate: () => boolean
   /** Internal: validate + fire onSubmit, returning whether it passed (2.2.0). */
   handleSubmitChecked: (e?: FormEvent) => boolean
+  /** Fields the user has left at least once; only populated for `validateOn: "blur"` (2.5.0 — additive) */
+  touched: Record<string, boolean>
+  /** Mark a field visited and surface its error (2.5.0 — additive) */
+  handleBlur: (name: string) => void
 }
 
 export type UseKiFormOptions<TValues extends FormValues = FormValues> = {
   fields?: FieldInput[]
   onSubmit?: (values: TValues) => void | Promise<unknown>
   schema?: KiFormSchema
+  /**
+   * When errors appear (2.5.0). Default "submit" preserves 2.0.0 behaviour.
+   * "blur" validates on first blur, then live while a field is in error —
+   * the "reward early, punish late" pattern from usability research.
+   */
+  validateOn?: "submit" | "blur"
 }
 
 /**
@@ -199,6 +245,21 @@ export type KiFormProps<TValues extends FormValues = FormValues, TFields extends
   variant?: "classic" | "conversational"
   /** Button labels for the conversational variant (added in 2.1.0). */
   stepLabels?: { next?: string; previous?: string; submit?: string }
+
+  // ---------- Validation UX (added in 2.5.0 — all optional) ----------
+  /**
+   * When field errors appear. Default "submit" preserves 2.0.0 behaviour.
+   * "blur" waits for the first blur, then revalidates live while a field is in
+   * error, so a half-typed value is never flagged.
+   */
+  validateOn?: "submit" | "blur"
+  /**
+   * Show a visual required marker. "asterisk" appends one to required labels;
+   * "legend" adds a note above the form. Default "none" — no visual change.
+   * `aria-required` is always set regardless, so assistive tech is covered
+   * even when no marker is drawn.
+   */
+  requiredMarker?: "none" | "asterisk" | "legend"
 
   // ---------- Collect responses (added in 2.2.0 — all optional) ----------
   /**

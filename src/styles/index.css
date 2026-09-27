@@ -7,6 +7,19 @@
   margin-bottom: 16px;
 }
 
+/* Required marker (2.5.0). The marker itself is aria-hidden; `aria-required`
+   on the control is what actually conveys the requirement. */
+.ki-required-marker {
+  margin-left: 3px;
+  color: var(--ki-error, #dc2626);
+}
+
+.ki-required-legend {
+  margin: 0 0 16px;
+  color: var(--ki-helper, #6b7280);
+  font-size: 12px;
+}
+
 /* Two-column rows: consecutive fields with width:"half" (2.5.0).
    The row itself is a grid, so a single-item trailing row spans both columns
    rather than leaving a hole. */

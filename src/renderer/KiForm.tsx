@@ -8,6 +8,7 @@ import { SelectField } from "../fields/Select"
 import { TextareaField } from "../fields/Textarea"
 import { CheckboxField } from "../fields/Checkbox"
 import { themeToCssVars } from "../theme"
+import { FieldConfigContext } from "./fieldConfig"
 import type { Field, FormApi, KiFormComponents, KiFormProps, SubmissionState } from "../types"
 
 const defaultComponents: KiFormComponents = {
@@ -170,12 +171,28 @@ function KiFormView(props: KiFormProps & { form: NonNullable<KiFormProps["form"]
       className={["ki-form", props.className].filter(Boolean).join(" ")}
       style={props.theme ? themeToCssVars(props.theme) : undefined}
     >
-      <FieldRows form={form} components={components} />
+      <FieldConfigContext.Provider value={{ requiredMarker: props.requiredMarker ?? "none" }}>
+        {props.requiredMarker === "legend" && <RequiredLegend />}
+        <FieldRows form={form} components={components} />
 
-      <ErrorSummary form={form} />
-      {submitButton}
-      {status}
+        <ErrorSummary form={form} />
+        {submitButton}
+        {status}
+      </FieldConfigContext.Provider>
     </form>
+  )
+}
+
+/**
+ * Explains the asterisk convention for screen-reader users too — the visible
+ * markers are aria-hidden, so without this the "*" is never announced.
+ */
+function RequiredLegend() {
+  return (
+    <p className="ki-required-legend">
+      Fields marked <span aria-hidden="true">*</span>
+      <span className="ki-sr-only">with an asterisk</span> are required.
+    </p>
   )
 }
 

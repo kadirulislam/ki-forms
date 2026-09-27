@@ -162,6 +162,26 @@ describe("ki-form.schema.json", () => {
     }
   })
 
+  it("validates the 2.5.0 validation-UX properties in both validators", () => {
+    const good = [
+      { name: "email", type: "email", autoComplete: "email", inputMode: "email" },
+      { name: "phone", type: "tel", autoComplete: false },
+      { name: "pw", type: "password", messages: { required: "We need one" } },
+    ]
+    expect(validateFields(good).success).toBe(true)
+    expectSchemaValid(good)
+    const bad: unknown[][] = [
+      [{ name: "a", autoComplete: 1 }],
+      [{ name: "a", inputMode: "telepathy" }],
+      [{ name: "a", messages: { required: 5 } }],
+      [{ name: "a", messages: { nope: "x" } }],
+    ]
+    for (const fields of bad) {
+      expect(validateFields(fields).success).toBe(false)
+      expectSchemaInvalid(fields)
+    }
+  })
+
   it("accepts full group conditions and string shorthand in both validators", () => {
     const fields = [
       "email",

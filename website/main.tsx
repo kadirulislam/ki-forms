@@ -20,6 +20,9 @@ import {
   CODE_CLI_VERIFY,
   CODE_CLI_OUTPUT,
   CODE_TWO_COLUMN,
+  CODE_AUTOFILL,
+  CODE_MESSAGES,
+  CODE_VALIDATE_ON,
   EXAMPLE_TWO_COLUMN,
   LANDING_SCHEMA,
   LANDING_REACT,
@@ -254,6 +257,66 @@ function renderPage(route: string) {
           <Callout title="Additive by default">
             <code>width</code> defaults to <code>"full"</code>, so existing schemas and every published form render exactly as
             before. The property is validated by the canonical validator and the published JSON Schema.
+          </Callout>
+        </PageShell>
+      )
+    case "docs/validation-ux":
+      return (
+        <PageShell eyebrow="Autofill and error messages" title="Validation UX">
+          <p>
+            Four defaults that follow what usability research actually recommends. All are additive: a form that sets none of
+            them behaves exactly as before.
+          </p>
+
+          <h2>Browser autofill</h2>
+          <p>
+            The <code>autocomplete</code> attribute has been in the HTML spec since 2012 and adoption is still poor, so
+            browsers guess a field's purpose from its <code>name</code>. Guessing goes wrong quietly — a &ldquo;First
+            name&rdquo; field filled with a full name, a shipping address dropped into billing. It is also an accessibility
+            mechanism: it is what lets a browser fill the whole form in one tap for users with motor, memory, or cognitive
+            disabilities, and it maps to WCAG 3.3.7 Redundant Entry.
+          </p>
+          <CodeBlock code={CODE_AUTOFILL} language="js" />
+          <p>
+            Inference is deliberately conservative. Only names from the HTML field-name list are mapped, and a
+            non-default type never overrides a name match. Password fields are never guessed, because{" "}
+            <code>new-password</code> versus <code>current-password</code> depends on whether the form is a signup or a
+            login — which a field cannot know. A wrong token is worse than none, so anything unmapped is left to the browser.
+          </p>
+
+          <h2>Error messages that suggest a fix</h2>
+          <p>
+            Baymard's usability testing is blunt about this: overly general messages &ldquo;force users to hunt for the
+            problem themselves,&rdquo; turning a small speed bump into a roadblock. WCAG 3.3.3 asks a message to suggest a
+            correction, not just name the error.
+          </p>
+          <CodeBlock code={CODE_MESSAGES} language="js" />
+          <p>
+            Messages are plain strings rather than functions so they stay portable JSON — the same reason{" "}
+            <code>onChange</code> is rejected by the schema validator.
+          </p>
+
+          <h2>When errors appear</h2>
+          <p>
+            The default <code>validateOn=&quot;submit&quot;</code> preserves 2.0.0 behaviour exactly.{" "}
+            <code>validateOn=&quot;blur&quot;</code> implements the pattern usability research converges on &mdash;{" "}
+            <em>reward early, punish late</em>: validate on first blur, then revalidate live while the field is in error so
+            it clears the moment it becomes valid. Validating on every keystroke from the start is a documented
+            anti-pattern; it flags a half-typed email as invalid.
+          </p>
+          <CodeBlock code={CODE_VALIDATE_ON} language="jsx" />
+
+          <h2>Marking required fields</h2>
+          <p>
+            <code>aria-required</code> is always set on required controls, so assistive technology is covered with no
+            configuration. The native <code>required</code> attribute is deliberately <em>not</em> set: it would trigger the
+            browser's own bubble UI and block submission, fighting ki-forms' error messages. If you want a visible marker,
+            <code>requiredMarker</code> draws an asterisk, a legend, or nothing (the default).
+          </p>
+          <Callout title="Research behind the defaults">
+            Baymard Institute (14 years of large-scale checkout testing) reports that 32% of sites provide no field
+            validation at all, and that error-message content decides whether a user recovers or leaves. WebAIM found
+            1.7M+ improperly labelled form fields, and WCAG 3.3.2 remains one of the most-failed criteria.
           </Callout>
         </PageShell>
       )

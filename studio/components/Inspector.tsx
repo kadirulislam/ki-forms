@@ -1,4 +1,5 @@
 import type { Condition, Field, FieldType, ShowIf } from "../../src/types"
+import { inferAutofill } from "../../src/utils/autocomplete"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Switch } from "./ui/switch"
@@ -133,6 +134,10 @@ export function Inspector({ field, otherFields, onChange, onDuplicate, onDelete 
 
       <Separator />
 
+      <AutofillSection field={field} onChange={onChange} />
+
+      <Separator />
+
       <WidthSection field={field} onChange={onChange} />
 
       <Separator />
@@ -175,6 +180,68 @@ function isValidPattern(pattern: string): boolean {
   } catch {
     return false
   }
+}
+
+/**
+ * Autofill hints and custom validation messages (2.5.0).
+ *
+ * Shows what `inferAutofill` will infer, so the value is discoverable rather
+ * than a silent runtime detail. Setting a token explicitly pins it; clearing
+ * the input returns to inference.
+ */
+function AutofillSection({ field, onChange }: { field: Field; onChange: (patch: Partial<Field>) => void }) {
+  const inferred = inferAutofill({ ...field, autoComplete: undefined, inputMode: undefined })
+  const currentToken = field.autoComplete === false ? "off" : field.autoComplete ?? inferred.autoComplete ?? ""
+  const messageOverrides = Object.entries(field.messages ?? {}).filter(([, v]) => typeof v === "string" && v !== "")
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-xs text-muted-foreground">Autofill</Label>
+        <Input
+          id="inspector-autocomplete"
+          value={currentToken}
+          placeholder={inferred.autoComplete ? `inferred: ${inferred.autoComplete}` : "browser decides"}
+          onChange={(e) => {
+            const raw = e.target.value.trim()
+            if (raw === "") onChange({ autoComplete: undefined })
+            else if (raw === "off") onChange({ autoComplete: false })
+            else onChange({ autoComplete: raw })
+          }}
+          className="h-8 font-mono text-xs"
+        />
+        <p className="text-[11px] text-muted-foreground">
+          {field.autoComplete === false
+            ? "Opted out — the browser will not offer to fill this field."
+            : inferred.inputMode
+              ? `Suggests a ${inferred.inputMode} keyboard on mobile.`
+              : "Lets the browser and password managers fill this field in one tap."}
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-xs text-muted-foreground">Required message</Label>
+        <Input
+          id="inspector-required-message"
+          value={(field.messages?.required as string) ?? ""}
+          placeholder="Email is required"
+          onChange={(e) => {
+            const next = e.target.value
+            onChange({ messages: { ...field.messages, required: next === "" ? undefined : next } })
+          }}
+          className="h-8"
+        />
+        <p className="text-[11px] text-muted-foreground">
+          Say what to do, not just what is wrong — WCAG 3.3.3 asks for a suggestion.
+        </p>
+        {messageOverrides.length > 0 && (
+          <p className="text-[11px] text-muted-foreground">
+            {messageOverrides.length} custom message{messageOverrides.length > 1 ? "s" : ""} on this field.
+          </p>
+        )}
+      </div>
+    </div>
+  )
 }
 
 /**

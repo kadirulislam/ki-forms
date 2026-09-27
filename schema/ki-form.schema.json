@@ -85,6 +85,20 @@
         "className": { "type": "string" },
         "helperText": { "type": "string" },
         "width": { "enum": ["half", "full"] },
+        "autoComplete": { "anyOf": [{ "type": "string" }, { "const": false }] },
+        "inputMode": { "enum": ["text", "email", "tel", "url", "numeric", "decimal", "search", "none"] },
+        "messages": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "required": { "type": "string" },
+            "minLength": { "type": "string" },
+            "maxLength": { "type": "string" },
+            "pattern": { "type": "string" },
+            "min": { "type": "string" },
+            "max": { "type": "string" }
+          }
+        },
         "onChange": false
       }
     },

@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { applyDefaults } from "../utils/defaults"
 import { shouldShow } from "../utils/conditions"
-import { Field, FieldInput, FormApi, FormValues, UseKiFormOptions } from "../types"
+import { constraintMessage, requiredMessage } from "../utils/messages"
+import { Field, FieldInput, FormApi, FormValues, KiFormSchema, UseKiFormOptions } from "../types"
 
 export function useKiForm<TValues extends FormValues = FormValues>(options: UseKiFormOptions<TValues>): FormApi<TValues> {
-  const { fields = [], onSubmit, schema } = options
+  const { fields = [], onSubmit, schema, validateOn = "submit" } = options
 
   const normalizedFields: Field[] = fields
     .map((f: FieldInput) =>
@@ -19,6 +20,16 @@ export function useKiForm<TValues extends FormValues = FormValues>(options: UseK
 
   const [values, setValues] = useState<FormValues>(initialValues)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  /**
+   * Fields the user has left at least once. `validateOn: "blur"` shows an error
+   * on first blur ("punish late") and then revalidates on every keystroke while
+   * the field is in error ("reward early"), which is the pattern usability
+   * research converges on. Validating on every keystroke from the start is a
+   * documented anti-pattern: it flags a half-typed email as invalid.
+   */
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const valuesRef = useRef<FormValues>(values)
+  valuesRef.current = values
 
   useEffect(() => {
     const names = new Set(normalizedFields.map((field) => field.name))
@@ -38,13 +49,68 @@ export function useKiForm<TValues extends FormValues = FormValues>(options: UseK
     })
   }, [normalizedFields])
 
+  /**
+   * The single source of error text for one field against one set of values.
+   * `validate`, `validateField` and the live blur path all funnel through here —
+   * they previously each reimplemented the required/constraint branching.
+   */
+  function errorForField(field: Field, current: FormValues, external?: KiFormSchema): string | undefined {
+    if (!shouldShow(field, current)) return undefined
+
+    if (field.required && isEmptyValue(field, current[field.name])) {
+      return requiredMessage(field)
+    }
+    const constraint = constraintMessage(field, current[field.name])
+    if (constraint) return constraint
+
+    if (external?.safeParse) {
+      const result = external.safeParse(current)
+      if (!result.success) {
+        // zod v3 exposes error.errors; zod v4 renamed it to error.issues.
+        const issues = result.error.errors ?? result.error.issues ?? []
+        const mine = issues.find((issue: { path?: (string | number)[] }) => issue.path?.[0] === field.name)
+        if (mine) return mine.message
+      }
+    }
+    return undefined
+  }
+
   function setValue(name: string, value: unknown) {
     const field = normalizedFields.find(f => f.name === name)
-    const updated = { ...values, [name]: value }
+    const updated = { ...valuesRef.current, [name]: value }
     setValues((prev) => {
       return { ...prev, [name]: value }
     })
     field?.onChange?.(value, updated)
+
+    // Reward early: once a field has been shown an error, clear it the moment
+    // the value becomes valid rather than waiting for another blur.
+    if (validateOn === "blur" && touched[name]) {
+      const error = field ? errorForField(field, updated, schema) : undefined
+      setErrors((prev) => {
+        if (error) return prev[name] === error ? prev : { ...prev, [name]: error }
+        if (!(name in prev)) return prev
+        const next = { ...prev }
+        delete next[name]
+        return next
+      })
+    }
+  }
+
+  /** Mark a field visited and show its error if it has one (2.5.0). */
+  function handleBlur(name: string) {
+    if (validateOn !== "blur") return
+    setTouched((prev) => (prev[name] ? prev : { ...prev, [name]: true }))
+    const field = normalizedFields.find((f) => f.name === name)
+    if (!field) return
+    const error = errorForField(field, valuesRef.current, schema)
+    setErrors((prev) => {
+      if (error) return prev[name] === error ? prev : { ...prev, [name]: error }
+      if (!(name in prev)) return prev
+      const next = { ...prev }
+      delete next[name]
+      return next
+    })
   }
 
   /** Validate all visible fields, update the error map, return pass/fail (2.2.0). */
@@ -53,26 +119,8 @@ export function useKiForm<TValues extends FormValues = FormValues>(options: UseK
 
     for (const field of normalizedFields) {
       if (!shouldShow(field, values)) continue
-
-      if (field.required && isEmptyValue(field, values[field.name])) {
-        newErrors[field.name] = `${field.label} is required`
-      } else {
-        const constraint = constraintError(field, values[field.name])
-        if (constraint) newErrors[field.name] = constraint
-      }
-    }
-
-    if (schema?.safeParse) {
-      const result = schema.safeParse(values)
-      if (!result.success) {
-        // zod v3 exposes error.errors; zod v4 renamed it to error.issues.
-        const issues = result.error.errors ?? result.error.issues ?? []
-        for (const err of issues) {
-          const key = err.path?.[0]
-          const dependent = normalizedFields.find((field) => field.name === key)
-          if (key && dependent && shouldShow(dependent, values)) newErrors[key] = err.message
-        }
-      }
+      const error = errorForField(field, values, schema)
+      if (error) newErrors[field.name] = error
     }
 
     setErrors(newErrors)
@@ -85,20 +133,7 @@ export function useKiForm<TValues extends FormValues = FormValues>(options: UseK
     const field = normalizedFields.find((f) => f.name === name)
     if (!field || !shouldShow(field, values)) return true
 
-    let error: string | undefined
-    if (field.required && isEmptyValue(field, values[field.name])) {
-      error = `${field.label} is required`
-    } else {
-      error = constraintError(field, values[field.name]) ?? undefined
-    }
-    if (!error && schema?.safeParse) {
-      const result = schema.safeParse(values)
-      if (!result.success) {
-        const issues = result.error.errors ?? result.error.issues ?? []
-        const mine = issues.find((issue: any) => issue.path?.[0] === name)
-        if (mine) error = mine.message
-      }
-    }
+    const error = errorForField(field, values, schema)
 
     setErrors((prev) => {
       if (!error) {
@@ -137,7 +172,9 @@ export function useKiForm<TValues extends FormValues = FormValues>(options: UseK
     handleSubmit,
     validateField,
     validate,
-    handleSubmitChecked
+    handleSubmitChecked,
+    touched,
+    handleBlur
   }
 }
 
@@ -151,29 +188,10 @@ function isEmptyValue(field: Field, value: unknown): boolean {
  * Field-constraint check (added in 2.4.0): length / pattern for text-like
  * values, range for numbers. Empty values are skipped — `required` owns
  * emptiness — and hidden fields never reach this helper.
+ *
+ * Delegates to `constraintMessage` so per-field `messages` overrides apply here
+ * too. Kept exported for 2.4.0 compatibility.
  */
 export function constraintError(field: Field, value: unknown): string | undefined {
-  const label = typeof field.label === "string" ? field.label : field.name
-  if (typeof value === "string" && value !== "") {
-    if (field.minLength !== undefined && value.length < field.minLength) {
-      return `${label} must be at least ${field.minLength} characters`
-    }
-    if (field.maxLength !== undefined && value.length > field.maxLength) {
-      return `${label} must be at most ${field.maxLength} characters`
-    }
-    if (field.pattern !== undefined) {
-      try {
-        if (!new RegExp(field.pattern).test(value)) return `${label} format is invalid`
-      } catch {
-        // Invalid patterns are rejected by the schema validator; never crash here.
-      }
-    }
-    return undefined
-  }
-  if (typeof value === "number" && !Number.isNaN(value)) {
-    if (field.min !== undefined && value < field.min) return `${label} must be at least ${field.min}`
-    if (field.max !== undefined && value > field.max) return `${label} must be at most ${field.max}`
-    return undefined
-  }
-  return undefined
+  return constraintMessage(field, value)
 }

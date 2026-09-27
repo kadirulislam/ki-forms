@@ -11,12 +11,16 @@ export { defaultTheme, themeToCssVars } from "./theme"
 export { evaluateCondition } from "./schema/conditions"
 export { validateFields, validateDocument, normalizeFields, normalizeDocument } from "./schema/validate"
 export type { SchemaIssue, SchemaResult, DocumentResult } from "./schema/validate"
+export { inferAutofill } from "./utils/autocomplete"
+export type { AutofillHints } from "./utils/autocomplete"
+export { requiredMessage, constraintMessage } from "./utils/messages"
 
 export type {
   Condition,
   FieldType,
   ShowIf,
   Field,
+  FieldMessages,
   FieldInput,
   FormValues,
   KiFormDocument,
