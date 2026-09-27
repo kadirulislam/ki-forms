@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-demo
+.docusaurus
+PLAN.md
+*.tgz
+
+# Launch copy: scratch working material for the 2.5.0 announcement.
+# Not part of the shipped project.
+LAUNCH-*.md
