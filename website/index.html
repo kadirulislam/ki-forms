@@ -1,5 +1,63 @@
 <!doctype html>
 <html lang="en">
-  <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>ki-forms documentation</title></head>
-  <body><div id="root"></div><script type="module" src="./main.tsx"></script></body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ki-forms documentation</title>
+    <style>
+      /* The launch badges are static markup outside #root so they are in the
+         served document whether or not JavaScript ever runs — this site is a
+         React shell around an empty <div id="root">, and markup that only
+         exists after hydration is invisible to a crawler and to a plain fetch.
+
+         The app relocates this node into a slot in the site header on mount
+         (see BADGES_ID in website/main.tsx). It ships above the app because
+         that position is the correct no-JS fallback. */
+      html { height: 100%; }
+      body { margin: 0; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+      #root { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+      #root .site { flex: 1 1 auto; }
+
+      .launch-badges {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        line-height: 0;
+      }
+      /* Only the pre-hydration position needs its own padding and rule. */
+      body > .launch-badges {
+        flex: 0 0 auto;
+        padding: 10px 24px;
+        border-bottom: 1px solid #e5e7eb;
+        background: #fff;
+      }
+      /* Each badge sits on a white plate; both SVGs are light-theme. */
+      .launch-badges a { display: block; padding: 2px; background: #fff; }
+      .launch-badges img { display: block; width: auto; height: 30px; max-width: 100%; }
+      /* Below `sm` the header is already carrying the brand and the full nav,
+         so one badge at a readable size beats two illegible ones. Both links
+         stay in the served HTML. */
+      @media (max-width: 639px) {
+        .launch-badges img { height: 24px; }
+        .launch-badges a[href*="producthunt"] { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Launch badges. Kept in the served HTML source, outside the React mount
+         point, so a plain HTTP fetch sees them with JavaScript disabled.
+         The app moves this node into the header on mount; until then this
+         position is the no-JS fallback.
+         Both are plain do-follow editorial links; the only rel directives here
+         are the security ones. Deliberately worded so this comment contains no
+         crawl-directive tokens, which a naive grep of the served page would
+         otherwise read as the badges themselves being tagged. -->
+    <div class="launch-badges" id="ki-launch-badges">
+      <a href="https://startupwiki.tech/launch" target="_blank" rel="noopener"><img src="https://startupwiki.tech/badges/featured-on-startupwiki.svg" alt="Featured on StartupWiki" width="240" height="56" /></a>
+      <a href="https://www.producthunt.com/products/ki-forms-studio?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-ki-forms-studio" target="_blank" rel="noopener noreferrer"><img alt="Ki Forms Studio - Visual form builder. Exports real React, Zod, and JSON. | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1260162&amp;theme=light&amp;t=1790685314197"></a>
+    </div>
+
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
 </html>

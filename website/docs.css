@@ -36,6 +36,12 @@ header {
   padding: 0 5px;
   margin-right: 3px;
 }
+/* Landing spot for the static launch badges, between the brand and the nav.
+   The header is `justify-content: space-between`, so this sits in the middle
+   band and takes the slack instead of pushing the nav around. */
+.launch-badges-slot { display: flex; align-items: center; min-width: 0; }
+@media (max-width: 720px) { .launch-badges-slot { display: none; } }
+
 nav { display: flex; gap: 18px; align-items: center; }
 nav a, nav button, .text-link {
   color: #4f46e5;

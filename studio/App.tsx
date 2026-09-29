@@ -84,7 +84,7 @@ const STORAGE_KEY = "ki-studio-doc-v2"
  * The markup lives there rather than in this component so it is present in the
  * served HTML; this app relocates it into the header on mount. The two must
  * agree, so the id is named once here and asserted in
- * `tests/studio-launch-badges.test.ts`.
+ * `tests/launch-badges.test.ts`.
  */
 const BADGES_ID = "ki-launch-badges"
 

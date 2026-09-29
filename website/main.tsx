@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { createRoot } from "react-dom/client"
 import { CodeBlock, LiveDemo, Callout, PropertyTable, PrevNext, LandingShowcase } from "./components/DocComponents"
 import {
@@ -34,6 +34,16 @@ import {
   LANDING_REACT,
 } from "./lib/docs-content"
 import "./docs.css"
+
+/**
+ * `id` of the static launch-badge block in `website/index.html`.
+ *
+ * The markup lives there rather than in this component so it is present in the
+ * served HTML; this app relocates it into the site header on mount. The two
+ * must agree, so the id is named once here and asserted in
+ * `tests/launch-badges.test.ts`.
+ */
+const BADGES_ID = "ki-launch-badges"
 
 function routeFromHash(): string {
   const hash = window.location.hash.replace(/^#\/?/, "")
@@ -513,6 +523,27 @@ function App() {
   const route = useRoute()
   const [query, setQuery] = useState("")
   const [drawer, setDrawer] = useState(false)
+  const badgeSlot = useRef<HTMLSpanElement>(null)
+
+  /**
+   * Move the static launch badges into the header.
+   *
+   * They are authored in `website/index.html` because this site is otherwise a
+   * React shell around an empty `<div id="root">`: markup that only exists
+   * after hydration is invisible to a crawler and to a plain `fetch`, and a
+   * do-follow badge nobody can fetch is not a link.
+   *
+   * So the node ships above the app and is relocated once, here. Before
+   * hydration it renders as a row at the top of the page, which is the correct
+   * no-JS fallback. React never owns this node, so it is never reconciled
+   * away — the slot has no children of its own for React to manage.
+   */
+  useEffect(() => {
+    const node = document.getElementById(BADGES_ID)
+    const slot = badgeSlot.current
+    if (!node || !slot || node.parentElement === slot) return
+    slot.appendChild(node)
+  }, [])
   const navPages = useMemo(() => DOC_PAGES.filter((p) => p.id !== "home"), [])
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -527,6 +558,9 @@ function App() {
     <div className="site">
       <header>
         <button className="brand" onClick={() => navigate("")}><span>ki</span>-forms</button>
+        {/* Landing spot for the static launch badges — see the effect above
+            for why they are not simply rendered here. */}
+        <span ref={badgeSlot} className="launch-badges-slot" />
         <nav>
           <button type="button" className="nav-docs" onClick={() => navigate("docs/getting-started")}>Docs</button>
           <a href="./studio/">Studio</a>
