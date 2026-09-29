@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest"
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react"
 import App from "../studio/App"
 import type { Field } from "../src/types"
@@ -6,9 +6,16 @@ import type { Field } from "../src/types"
 /**
  * Studio App shell smoke tests (shadcn rebuild, responsive shell).
  *
- * Both side panels are permanently docked, so there is no drawer to open and
- * the rail/panel controls are reachable at any viewport width. The canvas
- * renders the real KiForm, so "add field" must produce real inputs.
+ * At `lg` and above both side panels are permanently docked, so there is no
+ * drawer to open and the rail/panel controls are always reachable. Below `lg`
+ * the two columns become overlay drawers, because the docked layout needs
+ * 56 + 256 + 288 + 288 = 888px and pushes the canvas off a phone entirely.
+ * That switch is `max-lg:` CSS rather than JS, so the DOM below is identical at
+ * every width — which is why jsdom, with no media queries, still sees the
+ * docked desktop layout. The drawer tests assert the classes and the state
+ * logic, not a computed layout.
+ *
+ * The canvas renders the real KiForm, so "add field" must produce real inputs.
  */
 
 function panelButton(label: string): HTMLElement {
@@ -22,6 +29,9 @@ function panelButton(label: string): HTMLElement {
  * became permanently docked. Assert it rather than clicking: if the panel ever
  * regresses to collapsed-by-default, every panel test should say so plainly
  * instead of silently clicking a toggle open.
+ *
+ * This asserts the *desktop* contract. The `max-lg:` drawer classes are inert
+ * in jsdom, so a docked panel here is docked on a real desktop too.
  */
 function openDrawer() {
   const collapsed = screen.queryByRole("button", { name: "Open panels" })
@@ -628,5 +638,159 @@ describe("studio app (shadcn rebuild)", () => {
     expect(jsonEditor.getAttribute("wrap")).toBe("off")
 
     expect(screen.getByRole("tab", { name: /React component/i })).toBeTruthy()
+  })
+})
+
+/**
+ * The layout below `lg`.
+ *
+ * Every assertion here is about a class or a state transition, because jsdom
+ * applies no media queries — the `max-lg:` rules never take effect, so there is
+ * nothing to measure. What is pinned is the intent: the panels turn into
+ * drawers, they do it inside the app frame, and the canvas is allowed to shrink.
+ */
+describe("studio app below lg (drawer layout)", () => {
+  const realMatchMedia = window.matchMedia
+
+  /** Report a phone-sized viewport to the panel's initial-state check. */
+  function stubNarrowViewport() {
+    window.matchMedia = ((query: string) => ({
+      matches: query.includes("max-width"),
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    })) as unknown as typeof window.matchMedia
+  }
+
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  afterEach(() => {
+    window.matchMedia = realMatchMedia
+  })
+
+  it("starts the left panel closed on a narrow viewport instead of covering the canvas", () => {
+    stubNarrowViewport()
+    render(<App />)
+
+    // A drawer that opens on load would bury the only thing worth looking at.
+    // The toggle is present either way, so this is about the default.
+    const rail = screen.getByRole("navigation", { name: "Panels" })
+    const palette = rail.nextElementSibling as HTMLElement
+    expect(palette.className).toContain("max-lg:hidden")
+    expect(palette.className).toContain("w-0")
+    // And it opens on demand rather than being unreachable.
+    expect(screen.getByRole("button", { name: "Open panels" })).toBeTruthy()
+  })
+
+  it("turns both side panels into in-frame drawers and never uses fixed positioning", () => {
+    stubNarrowViewport()
+    localStorage.setItem(
+      "ki-studio-doc-v2",
+      JSON.stringify({ title: "Signup", fields: [{ name: "alpha" }], theme: {}, variant: "classic" }),
+    )
+    render(<App />)
+
+    const rail = screen.getByRole("navigation", { name: "Panels" })
+    const palette = rail.nextElementSibling as HTMLElement
+    const inspector = screen.getByTestId("inspector-panel")
+
+    for (const el of [palette, inspector]) {
+      // `absolute` inside the workspace row. `fixed` would escape the app frame
+      // and, on a phone, slide under the launch bar.
+      expect(el.className, "drawer must not be viewport-fixed").not.toContain("fixed")
+      expect(el.className).toContain("max-lg:absolute")
+      expect(el.className).toContain("max-lg:inset-y-0")
+    }
+    expect(palette.className).toContain("max-lg:left-14")
+    expect(inspector.className).toContain("max-lg:right-0")
+
+    // Opening the palette on a phone is a drawer, not a new column.
+    fireEvent.click(screen.getByRole("button", { name: "Open panels" }))
+    expect(palette.className).toContain("max-lg:w-[min(20rem,80vw)]")
+  })
+
+  it("hides the document summary on a narrow viewport until a field is selected", () => {
+    stubNarrowViewport()
+    localStorage.setItem(
+      "ki-studio-doc-v2",
+      JSON.stringify({ title: "Signup", fields: [{ name: "alpha" }], theme: {}, variant: "classic" }),
+    )
+    render(<App />)
+
+    const inspector = screen.getByTestId("inspector-panel")
+    // A permanent 288px column is a heavy tax on a 390px canvas, and the
+    // summary is the first thing that should give way.
+    expect(inspector.className).toContain("max-lg:hidden")
+
+    fireEvent.click(screen.getByLabelText("Field alpha"))
+    expect(inspector.className).not.toContain("max-lg:hidden")
+  })
+
+  it("lets the canvas take the full width instead of forcing an 888px row", () => {
+    stubNarrowViewport()
+    const { container } = render(<App />)
+
+    const main = container.querySelector("main")
+    // `min-w-72` unconditionally was the floor that made the row scroll sideways
+    // on a phone. It is now a desktop-only floor.
+    expect(main?.className).toContain("min-w-0")
+    expect(main?.className).toContain("lg:min-w-72")
+  })
+
+  it("dismisses an open drawer from the scrim", () => {
+    stubNarrowViewport()
+    render(<App />)
+
+    fireEvent.click(screen.getByRole("button", { name: "Open panels" }))
+    const scrim = screen.getByRole("button", { name: "Dismiss panel" })
+    expect(scrim.className).toContain("lg:hidden")
+    // Left of the scrim is the rail, which must stay tappable so you can switch
+    // panels without closing the current one first.
+    expect(scrim.className).toContain("left-14")
+
+    fireEvent.click(scrim)
+    const rail = screen.getByRole("navigation", { name: "Panels" })
+    expect((rail.nextElementSibling as HTMLElement).className).toContain("max-lg:hidden")
+  })
+})
+
+/**
+ * The launch badges are authored in `studio/index.html` so they reach crawlers,
+ * then moved into the header on mount so they sit next to the form title. This
+ * holds at every width, so it lives outside the `below lg` block.
+ */
+describe("studio app launch badges", () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  it("relocates the static badges into the header next to the form title", () => {
+    // jsdom has no index.html, so the node is planted the way the served
+    // document has it: a direct child of <body>, before the app mounts.
+    const badges = document.createElement("div")
+    badges.id = "ki-launch-badges"
+    badges.className = "ki-launch-bar"
+    badges.innerHTML = '<a href="https://startupwiki.tech/launch">badge</a>'
+    document.body.appendChild(badges)
+
+    try {
+      const { container } = render(<App />)
+
+      const header = container.querySelector("header")
+      expect(header, "the badges must land in the header, not the canvas").toBeTruthy()
+      expect(badges.parentElement).not.toBe(document.body)
+      // In the header, not merely somewhere in the app.
+      expect(badges.closest("header")).toBe(header)
+      // The link survives the move — that is the whole point of moving it.
+      expect(badges.querySelector('a[href="https://startupwiki.tech/launch"]')).toBeTruthy()
+    } finally {
+      badges.remove()
+    }
   })
 })

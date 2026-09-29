@@ -78,6 +78,16 @@ type DeviceMode = "desktop" | "tablet" | "mobile"
 
 const STORAGE_KEY = "ki-studio-doc-v2"
 
+/**
+ * `id` of the static launch-badge block in `studio/index.html`.
+ *
+ * The markup lives there rather than in this component so it is present in the
+ * served HTML; this app relocates it into the header on mount. The two must
+ * agree, so the id is named once here and asserted in
+ * `tests/studio-launch-badges.test.ts`.
+ */
+const BADGES_ID = "ki-launch-badges"
+
 const NEW_FIELD_SEEDS: Record<string, Partial<Field>> = {
   text: { type: "text", placeholder: "Short answer" },
   email: { type: "email", placeholder: "you@company.com" },
@@ -131,6 +141,8 @@ export default function App() {
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [selected, setSelected] = useState<number | null>(null)
+  /** Header slot the static launch badges are moved into on mount. */
+  const badgeSlot = useRef<HTMLSpanElement>(null)
   const [panel, setPanel] = useState<Panel>("blocks")
   const [zoom, setZoom] = useState(100)
   const [drag, setDrag] = useState<
@@ -140,7 +152,15 @@ export default function App() {
   >(null)
   const [panelOpen, setPanelOpen] = useState(() => {
     try {
-      return localStorage.getItem("ki-studio-panel") !== "0"
+      const stored = localStorage.getItem("ki-studio-panel")
+      if (stored === "1") return true
+      if (stored === "0") return false
+      // No stored preference. Below `lg` the palette is an overlay drawer, and
+      // an open drawer would bury the canvas on a phone, so start it closed
+      // there and open on a desktop. This reads matchMedia directly rather than
+      // going through `useMediaQuery` because it is a one-shot initial value,
+      // not something the layout re-renders on.
+      return !window.matchMedia("(max-width: 1023px)").matches
     } catch {
       return true
     }
@@ -159,8 +179,10 @@ export default function App() {
   const [preset, setPreset] = useState<ShadcnPreset | null>(null)
   const [presetDark, setPresetDark] = useState(false)
 
-  // Every panel is docked at every width now, so no width queries gate the
-  // layout. `useMinWidth` is kept for callers that still need a breakpoint.
+  // Every panel is docked at `lg` and above, so no width query gates the
+  // desktop layout. Below `lg` the two side columns become overlay drawers via
+  // `max-lg:` classes — CSS rather than JS, so there is no re-render on resize
+  // and the docked DOM is identical at every width.
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -177,6 +199,26 @@ export default function App() {
       // non-fatal
     }
   }, [dark])
+
+  /**
+   * Move the static launch badges into the header, next to the form title.
+   *
+   * They are authored in `studio/index.html` rather than rendered here, because
+   * the Studio is otherwise a React shell around an empty `<div id="root">`:
+   * markup that only exists after hydration is invisible to a crawler and to a
+   * plain `fetch`, and a do-follow badge that nobody can fetch is not a link.
+   *
+   * So the node ships above the app and is relocated once, here. Before
+   * hydration it renders as a row at the top of the page, which is the correct
+   * no-JS fallback. React never owns this node, so it is never reconciled away
+   * — the slot has no children of its own for React to manage.
+   */
+  useEffect(() => {
+    const node = document.getElementById(BADGES_ID)
+    const slot = badgeSlot.current
+    if (!node || !slot || node.parentElement === slot) return
+    slot.appendChild(node)
+  }, [])
 
   /** Ensure preset accent and radius are applied to root variables */
   useEffect(() => {
@@ -716,7 +758,10 @@ export default function App() {
       onDragEnd={onDragEnd}
       onDragCancel={onDragCancel}
     >
-      <div className="studio-root flex h-screen flex-col overflow-hidden font-sans antialiased bg-background text-foreground selection:bg-[--studio-accent]/20 selection:text-[--studio-accent]">
+      {/* `h-full`, not `h-screen`: the body is a flex column holding #root and,
+          before hydration, the static launch bar. Filling the column instead of
+          the viewport keeps the app inside its own box either way. */}
+      <div className="studio-root flex h-full min-h-0 flex-col overflow-hidden font-sans antialiased bg-background text-foreground selection:bg-[--studio-accent]/20 selection:text-[--studio-accent]">
         {/* ---------- Top Navigation Bar ---------- */}
         <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-card px-3 text-foreground">
           {/* Left section: Title and status */}
@@ -752,6 +797,10 @@ export default function App() {
                 https://kiforms.dev/f/{doc.title.toLowerCase().replace(/[^a-z0-9]/g, "-") || "preview"}
               </span>
             </div>
+
+            {/* Landing spot for the static launch badges — see the effect below
+                for why they are not simply rendered here. */}
+            <span ref={badgeSlot} className="flex shrink-0 items-center" />
           </div>
 
           {/* Center Cluster: Undo / Redo / Dark mode */}
@@ -903,12 +952,31 @@ export default function App() {
         </header>
 
         {/* ---------- Workspace Body ----------
-            Both side panels are permanently docked columns. They used to become
-            a modal drawer below `lg` and a floating card on the canvas, which
-            meant the tools you work with kept vanishing and reappearing. The
-            rail, the palette, and the inspector are now always in the layout;
-            the collapse toggles are the only thing that changes their width. */}
-        <div className="flex min-h-0 flex-1 overflow-x-auto">
+            Both side panels are docked columns at `lg` and above. They used to
+            become a modal drawer below `lg` and a floating card on the canvas,
+            which meant the tools you work with kept vanishing and reappearing.
+            The rail, the palette, and the inspector are always in the layout;
+            the collapse toggles are the only thing that changes their width.
+
+            Below `lg` the three columns need 56 + 256 + 288 + 288 = 888px, so on
+            a phone the canvas was pushed off-screen behind a sideways scroll.
+            There the two panels become overlay drawers (see their `max-lg:`
+            classes) and this row is their positioning context. */}
+        <div className="relative flex min-h-0 flex-1 overflow-x-auto">
+          {/* Tap-catcher for whichever drawer is open. `left-14` keeps the rail
+              reachable so you can switch panels without closing first, and
+              `lg:hidden` means it never exists on a desktop. */}
+          {(panelOpen || selectedField) && (
+            <button
+              type="button"
+              aria-label="Dismiss panel"
+              className="absolute inset-y-0 left-14 right-0 z-30 bg-black/20 lg:hidden"
+              onClick={() => {
+                setPanelOpen(false)
+                setSelected(null)
+              }}
+            />
+          )}
           {/* Left Navigation Rail */}
           <nav
             className="flex w-14 shrink-0 flex-col items-center justify-between border-r border-border bg-sidebar py-3"
@@ -971,11 +1039,14 @@ export default function App() {
             </Tooltip>
           </nav>
 
-          {/* Left palette column — always docked, never a drawer. */}
+          {/* Left palette column — docked at `lg`, a drawer below it. */}
           <aside
             className={
               "studio-scrollbar flex shrink-0 flex-col border-r border-border/80 bg-sidebar transition-all duration-200 " +
-              (panelOpen ? "w-64" : "w-0 overflow-hidden border-none")
+              // `absolute`, never `fixed`, so the drawer stays inside the app
+              // frame and cannot escape it or cover the launch bar.
+              "max-lg:absolute max-lg:inset-y-0 max-lg:left-14 max-lg:z-40 max-lg:shadow-2xl " +
+              (panelOpen ? "w-64 max-lg:w-[min(20rem,80vw)]" : "w-0 overflow-hidden border-none max-lg:hidden")
             }
           >
             <div className="flex h-10 shrink-0 items-center justify-between border-b border-border/80 px-3">
@@ -1002,7 +1073,7 @@ export default function App() {
           </aside>
 
           {/* Main Canvas Work Area */}
-          <main className="studio-canvas relative flex min-w-72 flex-1 flex-col overflow-hidden" onClick={() => setSelected(null)}>
+          <main className="studio-canvas relative flex min-w-0 flex-1 flex-col overflow-hidden lg:min-w-72" onClick={() => setSelected(null)}>
             {/* Canvas Sub-Header Bar (Controls) */}
             <div className="flex h-10 shrink-0 items-center justify-between border-b border-border bg-card px-3 z-10">
               <div className="flex items-center gap-2">
@@ -1115,8 +1186,10 @@ export default function App() {
               </div>
             </div>
 
-            {/* Scrollable Canvas Viewport */}
-            <div className="flex-1 overflow-auto p-4 sm:p-8 flex justify-center items-start studio-scrollbar">
+            {/* Scrollable Canvas Viewport. The narrower mobile gutter is not
+                cosmetic: the reorder grip hangs 28px outside its card, and the
+                16px gutter clipped it on a phone. */}
+            <div className="flex-1 overflow-auto p-3 sm:p-6 lg:p-8 flex justify-center items-start studio-scrollbar">
               <div
                 data-ki-preview={PREVIEW_SCOPE_VALUE}
                 style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}
@@ -1152,14 +1225,22 @@ export default function App() {
             {/* Floating Inspector Panel for smaller screens */}
           </main>
 
-          {/* Right column. Permanently docked at every width — it never
-              disappears, it just changes what it is showing. With a field
-              selected it is that field's settings; with nothing selected it is a
-              summary of the whole document, because a docked panel that blanks
-              out is worse than no panel at all. */}
+          {/* Right column. Docked at `lg` and above — it never disappears, it
+              just changes what it is showing. With a field selected it is that
+              field's settings; with nothing selected it is a summary of the
+              whole document, because a docked panel that blanks out is worse
+              than no panel at all.
+
+              Below `lg` it is a drawer instead, and only for a selected field:
+              a permanent 288px summary column is a heavy tax on a 390px
+              canvas, and there is no room to earn it back. */}
           <aside
             data-testid="inspector-panel"
-            className="studio-scrollbar flex w-72 shrink-0 flex-col border-l border-border bg-sidebar"
+            className={
+              "studio-scrollbar flex w-72 shrink-0 flex-col border-l border-border bg-sidebar " +
+              "max-lg:absolute max-lg:inset-y-0 max-lg:right-0 max-lg:z-40 max-lg:shadow-2xl " +
+              (selectedField ? "" : "max-lg:hidden")
+            }
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border/80 px-3">
@@ -1261,7 +1342,9 @@ export default function App() {
         {/* Live Drag Overlays matching the reference image */}
         <DragOverlay>
           {drag?.kind === "card" && dragField ? (
-            <div className="w-96 rotate-2 rounded-xl border-2 border-dashed border-[--studio-accent] bg-card p-4 shadow-2xl">
+            /* `w-96` is 384px — wider than most phones once the rail is taken
+               out, so the ghost hung off the edge mid-drag. */
+            <div className="w-[min(24rem,90vw)] rotate-2 rounded-xl border-2 border-dashed border-[--studio-accent] bg-card p-4 shadow-2xl">
               <FieldPreview field={dragField} />
             </div>
           ) : drag?.kind === "palette" ? (

@@ -6,9 +6,94 @@
     <title>ki-forms Studio — build the JSON, own the form</title>
     <meta name="description" content="Design ki-forms schemas visually: drag-and-drop fields, live preview, and copy-ready JSON + React code. No account, no lock-in." />
     <link rel="stylesheet" href="./ui.css" />
+    <style>
+      /* The launch bar is static markup outside #root, so it is in the served
+         document whether or not JavaScript ever runs. That is the whole reason
+         it lives here instead of in the React tree: the form title in the
+         header is React-rendered, so a badge placed after it in JSX would only
+         exist once the page had hydrated.
+
+         The Studio relocates this node into a slot in the header on mount (see
+         `BADGE_SLOT_ID` in studio/App.tsx), which is why it ships above the app:
+         that position is the correct no-JS fallback, and it is out of the way
+         until hydration moves it. */
+      html { height: 100%; }
+      body {
+        margin: 0;
+        height: 100%;
+        /* `vh` first so browsers without `dvh` still fill the viewport, then
+           `dvh` so the mobile URL bar cannot push things off-screen. */
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+      }
+      #root {
+        flex: 1 1 auto;
+        min-height: 0;
+      }
+
+      /* Inline content, not a bar: once the app hydrates this node lives in the
+         header next to the form title, so it has to behave like a row of small
+         inline items rather than a full-width strip. */
+      .ki-launch-bar {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 10px;
+        line-height: 0;
+      }
+      /* Only the pre-hydration position needs breathing room and a separator —
+         once it is a header child the header's own padding applies. */
+      body > .ki-launch-bar {
+        flex: 0 0 auto;
+        padding: 7px 12px;
+        border-bottom: 1px solid #e4e4e7;
+      }
+      @media (min-width: 640px) { body > .ki-launch-bar { padding-left: 56px; } }
+      .dark body > .ki-launch-bar { border-bottom-color: #27272a; }
+
+      /* Each badge sits on its own white plate. Both SVGs are light-theme, so
+         without this they lose their edges against the chrome. */
+      .ki-launch-bar a {
+        display: block;
+        padding: 2px;
+        background: #ffffff;
+      }
+      /* Height-driven so the badges stay under the 48px header. The 240x56 /
+         250x54 attributes stay on the <img> as given; CSS only scales the box. */
+      .ki-launch-bar img {
+        display: block;
+        width: auto;
+        height: 28px;
+        max-width: 100%;
+      }
+      /* Below `sm` the header has the back button, a 144px title and the
+         overflow menu already competing for room — two badges do not fit, and
+         shrinking them far enough to fit makes them unreadable. The Product
+         Hunt badge stands down; both links remain in the served HTML. */
+      @media (max-width: 639px) {
+        .ki-launch-bar img { height: 24px; }
+        .ki-launch-bar a[href*="producthunt"] { display: none; }
+      }
+    </style>
   </head>
   <body>
+    <!-- Launch badges. Kept in the served HTML source, outside the React mount
+         point, so a plain HTTP fetch sees them with JavaScript disabled.
+         The Studio moves this node into a header slot on mount; until then this
+         position is the no-JS fallback.
+         Both are plain do-follow editorial links; the only rel directives here
+         are the security ones. Deliberately worded so this comment contains no
+         crawl-directive tokens, which a naive grep of the served page would
+         otherwise read as the badges themselves being tagged. -->
+    <div class="ki-launch-bar" id="ki-launch-badges">
+      <a href="https://startupwiki.tech/launch" target="_blank" rel="noopener"><img src="https://startupwiki.tech/badges/featured-on-startupwiki.svg" alt="Featured on StartupWiki" width="240" height="56" /></a>
+      <a href="https://www.producthunt.com/products/ki-forms-studio?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-ki-forms-studio" target="_blank" rel="noopener noreferrer"><img alt="Ki Forms Studio - Visual form builder. Exports real React, Zod, and JSON. | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1260162&amp;theme=light&amp;t=1790685314197"></a>
+    </div>
+
     <div id="root"></div>
+
     <script type="module" src="./main.tsx"></script>
   </body>
 </html>
